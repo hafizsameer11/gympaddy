@@ -18,9 +18,14 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',
+        'username',
+        'fullname',
         'email',
+        'phone',
+        'age',
+        'gender',
         'password',
+        'role', // 'user' or 'admin'
     ];
 
     /**
@@ -42,4 +47,36 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    public function posts()
+    {
+        return $this->hasMany(Post::class);
+    }
+
+    public function comments()
+    {
+        return $this->hasMany(Comment::class);
+    }
+
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
+    public function giftsSent()
+    {
+        return $this->hasMany(Gift::class, 'sender_id');
+    }
+
+    public function giftsReceived()
+    {
+        return $this->hasMany(Gift::class, 'receiver_id');
+    }
+
+    public function profile()
+    {
+        return $this->hasOne(UserProfile::class);
+    }
+
+    // ...add other relationships as needed...
 }
