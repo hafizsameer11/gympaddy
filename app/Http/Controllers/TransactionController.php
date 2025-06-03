@@ -10,9 +10,11 @@ class TransactionController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return Transaction::all();
+        // Only show transactions for the authenticated user's wallet(s)
+        $wallets = $request->user()->wallets()->pluck('id');
+        return Transaction::whereIn('wallet_id', $wallets)->get();
     }
 
     /**
@@ -31,7 +33,11 @@ class TransactionController extends Controller
         $data = $request->validate([
             'wallet_id' => 'required|integer',
             'amount' => 'required|numeric',
-            'type' => 'required|string',
+            'type' => 'required|in:topup,withdraw,gift,purchase,ad,other',
+            'reference' => 'nullable|string',
+            'related_user_id' => 'nullable|integer',
+            'meta' => 'nullable',
+            'status' => 'nullable|string',
         ]);
         $transaction = Transaction::create($data);
         return response()->json($transaction, 201);
@@ -60,7 +66,11 @@ class TransactionController extends Controller
     {
         $data = $request->validate([
             'amount' => 'sometimes|numeric',
-            'type' => 'sometimes|string',
+            'type' => 'sometimes|in:topup,withdraw,gift,purchase,ad,other',
+            'reference' => 'nullable|string',
+            'related_user_id' => 'nullable|integer',
+            'meta' => 'nullable',
+            'status' => 'nullable|string',
         ]);
         $transaction->update($data);
         return response()->json($transaction);

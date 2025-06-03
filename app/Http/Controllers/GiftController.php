@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Gift;
+use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 
 class GiftController extends Controller
@@ -73,4 +74,10 @@ class GiftController extends Controller
         $gift->delete();
         return response()->json(['message' => 'Deleted']);
     }
+     protected function unauthenticated($request, AuthenticationException $exception)
+    {
+        // Always return JSON for API requests
+        return response()->json(['message' => 'Unauthenticated.'], 401);
+    }
+
 }

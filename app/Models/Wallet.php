@@ -27,4 +27,7 @@ class Wallet extends Model
     {
         return $this->hasMany(Transaction::class);
     }
+
+    // Make sure User model has:
+    // public function wallets() { return $this->hasMany(Wallet::class); }
 }

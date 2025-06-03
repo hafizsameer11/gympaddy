@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Wallet;
+use App\Models\Transaction;
 use Illuminate\Http\Request;
 
 class WalletController extends Controller
@@ -82,6 +83,18 @@ class WalletController extends Controller
         $wallet = Wallet::where('user_id', $request->user()->id)->firstOrFail();
         $wallet->balance += $request->amount;
         $wallet->save();
+
+        // Create transaction record
+        Transaction::create([
+            'wallet_id' => $wallet->id,
+            'type' => 'topup',
+            'amount' => $request->amount,
+            'reference' => null,
+            'related_user_id' => null,
+            'meta' => null,
+            'status' => 'completed',
+        ]);
+
         return response()->json($wallet);
     }
 
@@ -97,6 +110,18 @@ class WalletController extends Controller
         }
         $wallet->balance -= $request->amount;
         $wallet->save();
+
+        // Create transaction record
+        Transaction::create([
+            'wallet_id' => $wallet->id,
+            'type' => 'withdraw',
+            'amount' => $request->amount,
+            'reference' => null,
+            'related_user_id' => null,
+            'meta' => null,
+            'status' => 'completed',
+        ]);
+
         return response()->json($wallet);
     }
 }

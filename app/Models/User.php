@@ -63,6 +63,11 @@ class User extends Authenticatable
         return $this->hasOne(Wallet::class);
     }
 
+    public function wallets()
+    {
+        return $this->hasMany(Wallet::class);
+    }
+
     public function giftsSent()
     {
         return $this->hasMany(Gift::class, 'sender_id');
