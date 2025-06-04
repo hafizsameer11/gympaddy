@@ -28,10 +28,28 @@ class LiveStreamController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'title' => 'required|string',
+        $validator = \Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
+            'agora_channel' => 'required|string|max:255',
             // ...other fields...
         ]);
+        if ($validator->fails()) {
+            \Log::warning('LiveStream creation validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $data = $validator->validated();
+        $data['user_id'] = $request->user()->id;
         $liveStream = LiveStream::create($data);
         return response()->json($liveStream, 201);
     }
@@ -57,11 +75,27 @@ class LiveStreamController extends Controller
      */
     public function update(Request $request, LiveStream $liveStream)
     {
-        $data = $request->validate([
-            'title' => 'sometimes|string',
+        $validator = \Validator::make($request->all(), [
+            'title' => 'sometimes|required|string|max:255',
+            'agora_channel' => 'sometimes|required|string|max:255',
             // ...other fields...
         ]);
-        $liveStream->update($data);
+        if ($validator->fails()) {
+            \Log::warning('LiveStream update validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $liveStream->update($validator->validated());
         return response()->json($liveStream);
     }
 

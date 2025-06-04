@@ -224,16 +224,16 @@ All `/api/user/*` endpoints require the `Authorization: Bearer {token}` header. 
 
 #### Gifts
 
-- **GET** `/api/user/gifts`
 - **POST** `/api/user/gifts`
   - Body (JSON):
     ```json
     {
+      "to_user_id": 2,
       "name": "Gift Card",
-      "value": 10
+      "value": 10,
+      "message": "Congrats!"
     }
     ```
-- **GET** `/api/user/gifts/{gift}`
 - **PUT** `/api/user/gifts/{gift}`
   - Body (JSON):
     ```json
@@ -242,27 +242,24 @@ All `/api/user/*` endpoints require the `Authorization: Bearer {token}` header. 
       "value": 20
     }
     ```
-- **DELETE** `/api/user/gifts/{gift}`
 
 #### Transactions
 
-- **GET** `/api/user/transactions`
 - **POST** `/api/user/transactions`
   - Body (JSON):
     ```json
     {
       "wallet_id": 1,
       "amount": 100,
-      "type": "credit"
+      "type": "topup"
     }
     ```
-- **GET** `/api/user/transactions/{transaction}`
 - **PUT** `/api/user/transactions/{transaction}`
   - Body (JSON):
     ```json
     {
       "amount": 50,
-      "type": "debit"
+      "type": "withdraw"
     }
     ```
 - **DELETE** `/api/user/transactions/{transaction}`
@@ -541,7 +538,7 @@ All `/api/user/*` endpoints require the `Authorization: Bearer {token}` header. 
     {
       "caller_id": 1,
       "receiver_id": 2,
-      "channel": "call-channel"
+      "channel_name": "call-channel"
     }
     ```
 - **GET** `/api/user/video-calls/{video_call}`

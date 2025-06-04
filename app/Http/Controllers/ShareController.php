@@ -28,10 +28,26 @@ class ShareController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $validator = \Validator::make($request->all(), [
             'shareable_id' => 'required|integer',
             'shareable_type' => 'required|string',
         ]);
+        if ($validator->fails()) {
+            \Log::warning('Share creation validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $data = $validator->validated();
         $data['user_id'] = $request->user()->id;
         $share = Share::create($data);
         return response()->json($share, 201);
@@ -58,10 +74,25 @@ class ShareController extends Controller
      */
     public function update(Request $request, Share $share)
     {
-        $data = $request->validate([
+        $validator = \Validator::make($request->all(), [
             // ...fields...
         ]);
-        $share->update($data);
+        if ($validator->fails()) {
+            \Log::warning('Share update validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $share->update($validator->validated());
         return response()->json($share);
     }
 

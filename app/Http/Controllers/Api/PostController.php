@@ -24,12 +24,28 @@ class PostController extends Controller
 
     public function store(Request $request)
     {
-        $user = Auth::user();
-        $validated = $request->validate([
+        $user = \Auth::user();
+        $validator = \Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'content' => 'nullable|string',
             'media_url' => 'nullable|url',
         ]);
+        if ($validator->fails()) {
+            \Log::warning('Post creation validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $validated = $validator->validated();
         $post = Post::create([
             'user_id' => $user->id,
             'title' => $validated['title'],
@@ -50,16 +66,31 @@ class PostController extends Controller
 
     public function update(Request $request, Post $post)
     {
-        $user = Auth::user();
+        $user = \Auth::user();
         if ($post->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-        $validated = $request->validate([
+        $validator = \Validator::make($request->all(), [
             'title' => 'sometimes|required|string|max:255',
             'content' => 'nullable|string',
             'media_url' => 'nullable|url',
         ]);
-        $post->update($validated);
+        if ($validator->fails()) {
+            \Log::warning('Post update validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $post->update($validator->validated());
         return response()->json($post->load(['user', 'comments', 'likes']));
     }
 

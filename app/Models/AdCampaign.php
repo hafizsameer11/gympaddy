@@ -12,6 +12,9 @@ class AdCampaign extends Model
     protected $fillable = [
         'user_id',
         'name',
+        'title',
+        'content',
+        'media_url',
         'budget',
         'status',
         // ...other fields...

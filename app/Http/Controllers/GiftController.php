@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Gift;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class GiftController extends Controller
 {
@@ -29,10 +30,32 @@ class GiftController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string',
-            'value' => 'required|numeric',
+        $validator = \Validator::make($request->all(), [
+            'to_user_id' => 'required|integer|exists:users,id',
+            'name' => 'required|string|max:255',
+            'value' => 'required|numeric|min:0.01',
+            'message' => 'nullable|string|max:1000',
         ]);
+
+        if ($validator->fails()) {
+            Log::warning('Gift creation validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+        $data['from_user_id'] = $request->user()->id;
+        $data['amount'] = $data['value'];
         $gift = Gift::create($data);
         return response()->json($gift, 201);
     }
@@ -58,11 +81,27 @@ class GiftController extends Controller
      */
     public function update(Request $request, Gift $gift)
     {
-        $data = $request->validate([
-            'name' => 'sometimes|string',
-            'value' => 'sometimes|numeric',
+        $validator = \Validator::make($request->all(), [
+            'name' => 'sometimes|required|string|max:255',
+            'value' => 'sometimes|required|numeric|min:0.01',
+            'message' => 'nullable|string|max:1000',
         ]);
-        $gift->update($data);
+        if ($validator->fails()) {
+            Log::warning('Gift update validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $gift->update($validator->validated());
         return response()->json($gift);
     }
 

@@ -28,12 +28,50 @@ class LikeController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $validator = \Validator::make($request->all(), [
             'likeable_id' => 'required|integer',
-            'likeable_type' => 'required|string',
+            'likeable_type' => 'required|string|in:Post,Reel',
         ]);
+        if ($validator->fails()) {
+            \Log::warning('Like creation validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
         $data['user_id'] = $request->user()->id;
-        $like = Like::create($data);
+
+        // Check if already liked
+        $alreadyLiked = \App\Models\Like::where([
+            'user_id' => $data['user_id'],
+            'likeable_id' => $data['likeable_id'],
+            'likeable_type' => $data['likeable_type'],
+        ])->exists();
+
+        if ($alreadyLiked) {
+            return response()->json([
+                'status' => 'error',
+                'code' => 409,
+                'message' => 'Already liked',
+                'errors' => [[
+                    'field' => 'like',
+                    'reason' => 'User has already liked this item',
+                    'suggestion' => 'You cannot like the same item more than once'
+                ]],
+            ], 409);
+        }
+
+        $like = \App\Models\Like::create($data);
         return response()->json($like, 201);
     }
 
@@ -58,10 +96,25 @@ class LikeController extends Controller
      */
     public function update(Request $request, Like $like)
     {
-        $data = $request->validate([
+        $validator = \Validator::make($request->all(), [
             // ...fields...
         ]);
-        $like->update($data);
+        if ($validator->fails()) {
+            \Log::warning('Like update validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $like->update($validator->validated());
         return response()->json($like);
     }
 

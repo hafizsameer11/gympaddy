@@ -10,7 +10,8 @@ return new class extends Migration {
         Schema::create('ad_campaigns', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('title');
+            $table->string('name');
+            $table->string('title')->nullable();
             $table->text('content');
             $table->string('media_url')->nullable();
             $table->decimal('budget', 14, 2);

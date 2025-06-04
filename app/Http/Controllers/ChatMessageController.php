@@ -28,12 +28,27 @@ class ChatMessageController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
+        $validator = \Validator::make($request->all(), [
             'sender_id' => 'required|integer',
             'receiver_id' => 'required|integer',
             'message' => 'required|string',
         ]);
-        $chatMessage = ChatMessage::create($data);
+        if ($validator->fails()) {
+            \Log::warning('ChatMessage creation validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $chatMessage = ChatMessage::create($validator->validated());
         return response()->json($chatMessage, 201);
     }
 
@@ -58,10 +73,25 @@ class ChatMessageController extends Controller
      */
     public function update(Request $request, ChatMessage $chatMessage)
     {
-        $data = $request->validate([
-            'message' => 'sometimes|string',
+        $validator = \Validator::make($request->all(), [
+            'message' => 'sometimes|required|string',
         ]);
-        $chatMessage->update($data);
+        if ($validator->fails()) {
+            \Log::warning('ChatMessage update validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $chatMessage->update($validator->validated());
         return response()->json($chatMessage);
     }
 

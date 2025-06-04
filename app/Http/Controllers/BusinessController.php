@@ -28,11 +28,26 @@ class BusinessController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string',
-            // ...other fields...
+        $validator = \Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            // ...add other fields and constraints as needed...
         ]);
-        $business = Business::create($data);
+        if ($validator->fails()) {
+            \Log::warning('Business creation validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $business = Business::create($validator->validated());
         return response()->json($business, 201);
     }
 
@@ -57,11 +72,26 @@ class BusinessController extends Controller
      */
     public function update(Request $request, Business $business)
     {
-        $data = $request->validate([
-            'name' => 'sometimes|string',
-            // ...other fields...
+        $validator = \Validator::make($request->all(), [
+            'name' => 'sometimes|required|string|max:255',
+            // ...add other fields and constraints as needed...
         ]);
-        $business->update($data);
+        if ($validator->fails()) {
+            \Log::warning('Business update validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $business->update($validator->validated());
         return response()->json($business);
     }
 

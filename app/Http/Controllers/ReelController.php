@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Reel;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ReelController extends Controller
 {
@@ -29,12 +30,28 @@ class ReelController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-        $data = $request->validate([
-            'title' => 'required|string',
-            'media_url' => 'required|string',
-            'thumbnail_url' => 'nullable|string',
-            'caption' => 'nullable|string',
+        $validator = \Validator::make($request->all(), [
+            'title' => 'required|string|max:255',
+            'media_url' => 'required|string|max:2048',
+            'thumbnail_url' => 'nullable|string|max:2048',
+            'caption' => 'nullable|string|max:1000',
         ]);
+        if ($validator->fails()) {
+            Log::warning('Reel creation validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $data = $validator->validated();
         $data['user_id'] = $user->id;
         $reel = Reel::create($data);
         return response()->json($reel, 201);
@@ -61,11 +78,28 @@ class ReelController extends Controller
      */
     public function update(Request $request, Reel $reel)
     {
-        $data = $request->validate([
-            'title' => 'sometimes|string',
-            // ...other fields...
+        $validator = \Validator::make($request->all(), [
+            'title' => 'sometimes|required|string|max:255',
+            'media_url' => 'sometimes|required|string|max:2048',
+            'thumbnail_url' => 'nullable|string|max:2048',
+            'caption' => 'nullable|string|max:1000',
         ]);
-        $reel->update($data);
+        if ($validator->fails()) {
+            Log::warning('Reel update validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $reel->update($validator->validated());
         return response()->json($reel);
     }
 

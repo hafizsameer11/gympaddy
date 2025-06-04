@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AdCampaign;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class AdCampaignController extends Controller
 {
@@ -28,10 +29,30 @@ class AdCampaignController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string',
-            // ...other fields...
+        $validator = \Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'content' => 'required|string',
+            'budget' => 'required|numeric|min:0.01',
+            'status' => 'nullable|string|in:pending,active,paused,completed,rejected',
+            // ...add other fields and constraints as needed...
         ]);
+        if ($validator->fails()) {
+            Log::warning('AdCampaign creation validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $data = $validator->validated();
+        $data['user_id'] = $request->user()->id;
         $adCampaign = AdCampaign::create($data);
         return response()->json($adCampaign, 201);
     }
@@ -57,11 +78,29 @@ class AdCampaignController extends Controller
      */
     public function update(Request $request, AdCampaign $adCampaign)
     {
-        $data = $request->validate([
-            'name' => 'sometimes|string',
-            // ...other fields...
+        $validator = \Validator::make($request->all(), [
+            'name' => 'sometimes|required|string|max:255',
+            'content' => 'sometimes|required|string',
+            'budget' => 'sometimes|required|numeric|min:0.01',
+            'status' => 'nullable|string|in:pending,active,paused,completed,rejected',
+            // ...add other fields and constraints as needed...
         ]);
-        $adCampaign->update($data);
+        if ($validator->fails()) {
+            Log::warning('AdCampaign update validation failed', ['errors' => $validator->errors()]);
+            return response()->json([
+                'status' => 'error',
+                'code' => 422,
+                'message' => 'Validation Failed',
+                'errors' => collect($validator->errors())->map(function($messages, $field) {
+                    return [
+                        'field' => $field,
+                        'reason' => $messages[0],
+                        'suggestion' => 'Please provide a valid value'
+                    ];
+                })->values(),
+            ], 422);
+        }
+        $adCampaign->update($validator->validated());
         return response()->json($adCampaign);
     }
 
