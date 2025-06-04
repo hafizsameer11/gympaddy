@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('posts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->string('title')->nullable();
             $table->text('content')->nullable();
             $table->string('media_url')->nullable();
             $table->enum('media_type', ['image', 'video', 'none'])->default('none');

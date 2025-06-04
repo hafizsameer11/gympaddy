@@ -8,7 +8,7 @@ class Post extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'content', 'media_url', 'media_type'];
+    protected $fillable = ['user_id', 'title', 'content', 'media_url', 'media_type'];
 
     public function user()
     {

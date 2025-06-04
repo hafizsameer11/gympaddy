@@ -13,6 +13,8 @@ return new class extends Migration {
             $table->foreignId('to_user_id')->constrained('users');
             $table->decimal('amount', 12, 2);
             $table->string('message')->nullable();
+            $table->string('name');
+            $table->decimal('value', 12, 2);
             $table->timestamps();
         });
     }

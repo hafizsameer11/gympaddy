@@ -28,10 +28,14 @@ class ReelController extends Controller
      */
     public function store(Request $request)
     {
+        $user = $request->user();
         $data = $request->validate([
             'title' => 'required|string',
-            // ...other fields...
+            'media_url' => 'required|string',
+            'thumbnail_url' => 'nullable|string',
+            'caption' => 'nullable|string',
         ]);
+        $data['user_id'] = $user->id;
         $reel = Reel::create($data);
         return response()->json($reel, 201);
     }

@@ -13,8 +13,8 @@ class Reel extends Model
         'user_id',
         'title',
         'media_url',
-        'media_type',
-        // ...other fields...
+        'thumbnail_url',
+        'caption',
     ];
 
     public function user()

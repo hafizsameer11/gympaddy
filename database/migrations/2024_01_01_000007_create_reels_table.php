@@ -10,7 +10,8 @@ return new class extends Migration {
         Schema::create('reels', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('video_url');
+            $table->string('title');
+            $table->string('media_url');
             $table->string('thumbnail_url')->nullable();
             $table->string('caption')->nullable();
             $table->timestamps();
