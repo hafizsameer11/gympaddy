@@ -3,17 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdCampaign;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use App\Http\Requests\StoreAdCampaignRequest;
+use App\Http\Requests\UpdateAdCampaignRequest;
+use App\Services\AdCampaignService;
 
 class AdCampaignController extends Controller
 {
+    protected AdCampaignService $adCampaignService;
+
+    public function __construct(AdCampaignService $adCampaignService)
+    {
+        $this->adCampaignService = $adCampaignService;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return AdCampaign::all();
+        return $this->adCampaignService->index();
     }
 
     /**
@@ -27,34 +35,9 @@ class AdCampaignController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreAdCampaignRequest $request)
     {
-        $validator = \Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'content' => 'required|string',
-            'budget' => 'required|numeric|min:0.01',
-            'status' => 'nullable|string|in:pending,active,paused,completed,rejected',
-            // ...add other fields and constraints as needed...
-        ]);
-        if ($validator->fails()) {
-            Log::warning('AdCampaign creation validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-        $data = $validator->validated();
-        $data['user_id'] = $request->user()->id;
-        $adCampaign = AdCampaign::create($data);
-        return response()->json($adCampaign, 201);
+        return $this->adCampaignService->store($request->user(), $request->validated());
     }
 
     /**
@@ -62,7 +45,7 @@ class AdCampaignController extends Controller
      */
     public function show(AdCampaign $adCampaign)
     {
-        return $adCampaign;
+        return $this->adCampaignService->show($adCampaign);
     }
 
     /**
@@ -76,32 +59,9 @@ class AdCampaignController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, AdCampaign $adCampaign)
+    public function update(UpdateAdCampaignRequest $request, AdCampaign $adCampaign)
     {
-        $validator = \Validator::make($request->all(), [
-            'name' => 'sometimes|required|string|max:255',
-            'content' => 'sometimes|required|string',
-            'budget' => 'sometimes|required|numeric|min:0.01',
-            'status' => 'nullable|string|in:pending,active,paused,completed,rejected',
-            // ...add other fields and constraints as needed...
-        ]);
-        if ($validator->fails()) {
-            Log::warning('AdCampaign update validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-        $adCampaign->update($validator->validated());
-        return response()->json($adCampaign);
+        return $this->adCampaignService->update($adCampaign, $request->validated());
     }
 
     /**
@@ -109,7 +69,6 @@ class AdCampaignController extends Controller
      */
     public function destroy(AdCampaign $adCampaign)
     {
-        $adCampaign->delete();
-        return response()->json(['message' => 'Deleted']);
+        return $this->adCampaignService->destroy($adCampaign);
     }
 }

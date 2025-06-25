@@ -3,16 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\LiveStream;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreLiveStreamRequest;
+use App\Http\Requests\UpdateLiveStreamRequest;
+use App\Services\LiveStreamService;
 
 class LiveStreamController extends Controller
 {
+    protected LiveStreamService $liveStreamService;
+
+    public function __construct(LiveStreamService $liveStreamService)
+    {
+        $this->liveStreamService = $liveStreamService;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return LiveStream::all();
+        return $this->liveStreamService->index();
     }
 
     /**
@@ -26,32 +35,9 @@ class LiveStreamController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreLiveStreamRequest $request)
     {
-        $validator = \Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'agora_channel' => 'required|string|max:255',
-            // ...other fields...
-        ]);
-        if ($validator->fails()) {
-            \Log::warning('LiveStream creation validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-        $data = $validator->validated();
-        $data['user_id'] = $request->user()->id;
-        $liveStream = LiveStream::create($data);
-        return response()->json($liveStream, 201);
+        return $this->liveStreamService->store($request->user(), $request->validated());
     }
 
     /**
@@ -59,7 +45,7 @@ class LiveStreamController extends Controller
      */
     public function show(LiveStream $liveStream)
     {
-        return $liveStream;
+        return $this->liveStreamService->show($liveStream);
     }
 
     /**
@@ -73,30 +59,9 @@ class LiveStreamController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, LiveStream $liveStream)
+    public function update(UpdateLiveStreamRequest $request, LiveStream $liveStream)
     {
-        $validator = \Validator::make($request->all(), [
-            'title' => 'sometimes|required|string|max:255',
-            'agora_channel' => 'sometimes|required|string|max:255',
-            // ...other fields...
-        ]);
-        if ($validator->fails()) {
-            \Log::warning('LiveStream update validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-        $liveStream->update($validator->validated());
-        return response()->json($liveStream);
+        return $this->liveStreamService->update($liveStream, $request->validated());
     }
 
     /**
@@ -104,7 +69,7 @@ class LiveStreamController extends Controller
      */
     public function destroy(LiveStream $liveStream)
     {
-        $liveStream->delete();
-        return response()->json(['message' => 'Deleted']);
+        return $this->liveStreamService->destroy($liveStream);
     }
 }
+  

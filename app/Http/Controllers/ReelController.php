@@ -3,17 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\Reel;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use App\Http\Requests\StoreReelRequest;
+use App\Http\Requests\UpdateReelRequest;
+use App\Services\ReelService;
 
 class ReelController extends Controller
 {
+    protected ReelService $reelService;
+
+    public function __construct(ReelService $reelService)
+    {
+        $this->reelService = $reelService;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return Reel::all();
+        return $this->reelService->index();
     }
 
     /**
@@ -27,34 +35,9 @@ class ReelController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreReelRequest $request)
     {
-        $user = $request->user();
-        $validator = \Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
-            'media_url' => 'required|string|max:2048',
-            'thumbnail_url' => 'nullable|string|max:2048',
-            'caption' => 'nullable|string|max:1000',
-        ]);
-        if ($validator->fails()) {
-            Log::warning('Reel creation validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-        $data = $validator->validated();
-        $data['user_id'] = $user->id;
-        $reel = Reel::create($data);
-        return response()->json($reel, 201);
+        return $this->reelService->store($request->user(), $request->validated());
     }
 
     /**
@@ -62,7 +45,7 @@ class ReelController extends Controller
      */
     public function show(Reel $reel)
     {
-        return $reel;
+        return $this->reelService->show($reel);
     }
 
     /**
@@ -76,31 +59,9 @@ class ReelController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Reel $reel)
+    public function update(UpdateReelRequest $request, Reel $reel)
     {
-        $validator = \Validator::make($request->all(), [
-            'title' => 'sometimes|required|string|max:255',
-            'media_url' => 'sometimes|required|string|max:2048',
-            'thumbnail_url' => 'nullable|string|max:2048',
-            'caption' => 'nullable|string|max:1000',
-        ]);
-        if ($validator->fails()) {
-            Log::warning('Reel update validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-        $reel->update($validator->validated());
-        return response()->json($reel);
+        return $this->reelService->update($reel, $request->validated());
     }
 
     /**
@@ -108,7 +69,6 @@ class ReelController extends Controller
      */
     public function destroy(Reel $reel)
     {
-        $reel->delete();
-        return response()->json(['message' => 'Deleted']);
+        return $this->reelService->destroy($reel);
     }
 }

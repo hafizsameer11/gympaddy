@@ -3,16 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\ChatMessage;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreChatMessageRequest;
+use App\Http\Requests\UpdateChatMessageRequest;
+use App\Services\ChatMessageService;
 
 class ChatMessageController extends Controller
 {
+    protected ChatMessageService $chatMessageService;
+
+    public function __construct(ChatMessageService $chatMessageService)
+    {
+        $this->chatMessageService = $chatMessageService;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return ChatMessage::all();
+        return $this->chatMessageService->index();
     }
 
     /**
@@ -26,30 +35,9 @@ class ChatMessageController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreChatMessageRequest $request)
     {
-        $validator = \Validator::make($request->all(), [
-            'sender_id' => 'required|integer',
-            'receiver_id' => 'required|integer',
-            'message' => 'required|string',
-        ]);
-        if ($validator->fails()) {
-            \Log::warning('ChatMessage creation validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-        $chatMessage = ChatMessage::create($validator->validated());
-        return response()->json($chatMessage, 201);
+        return $this->chatMessageService->store($request->validated());
     }
 
     /**
@@ -57,7 +45,7 @@ class ChatMessageController extends Controller
      */
     public function show(ChatMessage $chatMessage)
     {
-        return $chatMessage;
+        return $this->chatMessageService->show($chatMessage);
     }
 
     /**
@@ -71,28 +59,9 @@ class ChatMessageController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, ChatMessage $chatMessage)
+    public function update(UpdateChatMessageRequest $request, ChatMessage $chatMessage)
     {
-        $validator = \Validator::make($request->all(), [
-            'message' => 'sometimes|required|string',
-        ]);
-        if ($validator->fails()) {
-            \Log::warning('ChatMessage update validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-        $chatMessage->update($validator->validated());
-        return response()->json($chatMessage);
+        return $this->chatMessageService->update($chatMessage, $request->validated());
     }
 
     /**
@@ -100,7 +69,7 @@ class ChatMessageController extends Controller
      */
     public function destroy(ChatMessage $chatMessage)
     {
-        $chatMessage->delete();
-        return response()->json(['message' => 'Deleted']);
+        return $this->chatMessageService->destroy($chatMessage);
     }
 }
+   

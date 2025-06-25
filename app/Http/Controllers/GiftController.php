@@ -3,18 +3,26 @@
 namespace App\Http\Controllers;
 
 use App\Models\Gift;
+use App\Http\Requests\StoreGiftRequest;
+use App\Http\Requests\UpdateGiftRequest;
+use App\Services\GiftService;
 use Illuminate\Auth\AuthenticationException;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 
 class GiftController extends Controller
 {
+    protected GiftService $giftService;
+
+    public function __construct(GiftService $giftService)
+    {
+        $this->giftService = $giftService;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return Gift::all();
+        return $this->giftService->index();
     }
 
     /**
@@ -28,36 +36,9 @@ class GiftController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreGiftRequest $request)
     {
-        $validator = \Validator::make($request->all(), [
-            'to_user_id' => 'required|integer|exists:users,id',
-            'name' => 'required|string|max:255',
-            'value' => 'required|numeric|min:0.01',
-            'message' => 'nullable|string|max:1000',
-        ]);
-
-        if ($validator->fails()) {
-            Log::warning('Gift creation validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-
-        $data = $validator->validated();
-        $data['from_user_id'] = $request->user()->id;
-        $data['amount'] = $data['value'];
-        $gift = Gift::create($data);
-        return response()->json($gift, 201);
+        return $this->giftService->store($request->user(), $request->validated());
     }
 
     /**
@@ -65,7 +46,7 @@ class GiftController extends Controller
      */
     public function show(Gift $gift)
     {
-        return $gift;
+        return $this->giftService->show($gift);
     }
 
     /**
@@ -79,30 +60,9 @@ class GiftController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Gift $gift)
+    public function update(UpdateGiftRequest $request, Gift $gift)
     {
-        $validator = \Validator::make($request->all(), [
-            'name' => 'sometimes|required|string|max:255',
-            'value' => 'sometimes|required|numeric|min:0.01',
-            'message' => 'nullable|string|max:1000',
-        ]);
-        if ($validator->fails()) {
-            Log::warning('Gift update validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-        $gift->update($validator->validated());
-        return response()->json($gift);
+        return $this->giftService->update($gift, $request->validated());
     }
 
     /**
@@ -110,13 +70,13 @@ class GiftController extends Controller
      */
     public function destroy(Gift $gift)
     {
-        $gift->delete();
-        return response()->json(['message' => 'Deleted']);
+        return $this->giftService->destroy($gift);
     }
-     protected function unauthenticated($request, AuthenticationException $exception)
+
+    protected function unauthenticated($request, AuthenticationException $exception)
     {
         // Always return JSON for API requests
         return response()->json(['message' => 'Unauthenticated.'], 401);
     }
-
 }
+  

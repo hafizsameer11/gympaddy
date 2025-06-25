@@ -3,16 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\MarketplaceCategory;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreMarketplaceCategoryRequest;
+use App\Http\Requests\UpdateMarketplaceCategoryRequest;
+use App\Services\MarketplaceCategoryService;
 
 class MarketplaceCategoryController extends Controller
 {
+    protected MarketplaceCategoryService $marketplaceCategoryService;
+
+    public function __construct(MarketplaceCategoryService $marketplaceCategoryService)
+    {
+        $this->marketplaceCategoryService = $marketplaceCategoryService;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return MarketplaceCategory::all();
+        return $this->marketplaceCategoryService->index();
     }
 
     /**
@@ -26,29 +35,9 @@ class MarketplaceCategoryController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreMarketplaceCategoryRequest $request)
     {
-        $validator = \Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            // ...other fields...
-        ]);
-        if ($validator->fails()) {
-            \Log::warning('MarketplaceCategory creation validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-        $category = MarketplaceCategory::create($validator->validated());
-        return response()->json($category, 201);
+        return $this->marketplaceCategoryService->store($request->validated());
     }
 
     /**
@@ -56,7 +45,7 @@ class MarketplaceCategoryController extends Controller
      */
     public function show(MarketplaceCategory $marketplaceCategory)
     {
-        return $marketplaceCategory;
+        return $this->marketplaceCategoryService->show($marketplaceCategory);
     }
 
     /**
@@ -70,29 +59,9 @@ class MarketplaceCategoryController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, MarketplaceCategory $marketplaceCategory)
+    public function update(UpdateMarketplaceCategoryRequest $request, MarketplaceCategory $marketplaceCategory)
     {
-        $validator = \Validator::make($request->all(), [
-            'name' => 'sometimes|required|string|max:255',
-            // ...other fields...
-        ]);
-        if ($validator->fails()) {
-            \Log::warning('MarketplaceCategory update validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-        $marketplaceCategory->update($validator->validated());
-        return response()->json($marketplaceCategory);
+        return $this->marketplaceCategoryService->update($marketplaceCategory, $request->validated());
     }
 
     /**
@@ -100,7 +69,7 @@ class MarketplaceCategoryController extends Controller
      */
     public function destroy(MarketplaceCategory $marketplaceCategory)
     {
-        $marketplaceCategory->delete();
-        return response()->json(['message' => 'Deleted']);
+        return $this->marketplaceCategoryService->destroy($marketplaceCategory);
     }
 }
+      

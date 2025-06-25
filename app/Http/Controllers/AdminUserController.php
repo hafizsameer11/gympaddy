@@ -3,11 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
+use App\Services\UserService;
 
 class AdminUserController extends Controller
 {
-    public function __construct()
+    protected UserService $userService;
+
+    public function __construct(UserService $userService)
     {
         // Optionally add middleware to restrict to admin
         $this->middleware(function ($request, $next) {
@@ -16,38 +20,34 @@ class AdminUserController extends Controller
             }
             return $next($request);
         });
+        $this->userService = $userService;
     }
 
     public function index()
     {
-        return User::paginate(20);
+        return $this->userService->index();
     }
 
     public function show($id)
     {
-        return User::findOrFail($id);
+        return $this->userService->show($id);
     }
 
-    public function store(Request $request)
+    public function store(StoreUserRequest $request)
     {
-        $data = $request->validate([
-            'username' => 'required|string|unique:users,username',
-            'fullname' => 'required|string',
-            'email' => 'required|email|unique:users,email',
-            'phone' => 'required|string|unique:users,phone',
-            'age' => 'nullable|integer',
-            'gender' => 'nullable|in:male,female,other',
-            'password' => 'required|string|min:6',
-            'role' => 'nullable|string',
-        ]);
-        $data['password'] = bcrypt($data['password']);
-        $user = User::create($data);
-        return response()->json($user, 201);
+        return $this->userService->store($request->validated());
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateUserRequest $request, $id)
     {
-        $user = User::findOrFail($id);
+        return $this->userService->update($id, $request->validated());
+    }
+
+    public function destroy($id)
+    {
+        return $this->userService->destroy($id);
+    }
+}
         $data = $request->validate([
             'username' => 'sometimes|string|unique:users,username,' . $user->id,
             'fullname' => 'sometimes|string',

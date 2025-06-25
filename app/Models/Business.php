@@ -9,12 +9,14 @@ class Business extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'user_id',
-        'name',
-        'status', // pending, approved, rejected
-        // ...other fields...
-    ];
+ protected $fillable = [
+    'user_id',
+    'name',
+    'description',
+    'registration_number', // ← this was missing
+    'status',
+];
+
 
     public function user()
     {

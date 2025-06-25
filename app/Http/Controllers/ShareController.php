@@ -3,16 +3,25 @@
 namespace App\Http\Controllers;
 
 use App\Models\Share;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreShareRequest;
+use App\Http\Requests\UpdateShareRequest;
+use App\Services\ShareService;
 
 class ShareController extends Controller
 {
+    protected ShareService $shareService;
+
+    public function __construct(ShareService $shareService)
+    {
+        $this->shareService = $shareService;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return Share::all();
+        return $this->shareService->index();
     }
 
     /**
@@ -26,31 +35,9 @@ class ShareController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreShareRequest $request)
     {
-        $validator = \Validator::make($request->all(), [
-            'shareable_id' => 'required|integer',
-            'shareable_type' => 'required|string',
-        ]);
-        if ($validator->fails()) {
-            \Log::warning('Share creation validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-        $data = $validator->validated();
-        $data['user_id'] = $request->user()->id;
-        $share = Share::create($data);
-        return response()->json($share, 201);
+        return $this->shareService->store($request->user(), $request->validated());
     }
 
     /**
@@ -58,7 +45,7 @@ class ShareController extends Controller
      */
     public function show(Share $share)
     {
-        return $share;
+        return $this->shareService->show($share);
     }
 
     /**
@@ -72,28 +59,9 @@ class ShareController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Share $share)
+    public function update(UpdateShareRequest $request, Share $share)
     {
-        $validator = \Validator::make($request->all(), [
-            // ...fields...
-        ]);
-        if ($validator->fails()) {
-            \Log::warning('Share update validation failed', ['errors' => $validator->errors()]);
-            return response()->json([
-                'status' => 'error',
-                'code' => 422,
-                'message' => 'Validation Failed',
-                'errors' => collect($validator->errors())->map(function($messages, $field) {
-                    return [
-                        'field' => $field,
-                        'reason' => $messages[0],
-                        'suggestion' => 'Please provide a valid value'
-                    ];
-                })->values(),
-            ], 422);
-        }
-        $share->update($validator->validated());
-        return response()->json($share);
+        return $this->shareService->update($share, $request->validated());
     }
 
     /**
@@ -101,7 +69,7 @@ class ShareController extends Controller
      */
     public function destroy(Share $share)
     {
-        $share->delete();
-        return response()->json(['message' => 'Deleted']);
+        return $this->shareService->destroy($share);
     }
 }
+ 

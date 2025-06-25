@@ -3,38 +3,35 @@
 namespace App\Http\Controllers;
 
 use App\Models\Wallet;
-use App\Models\Transaction;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreWalletRequest;
+use App\Http\Requests\UpdateWalletRequest;
+use App\Http\Requests\TopupWalletRequest;
+use App\Http\Requests\WithdrawWalletRequest;
+use App\Services\WalletService;
 
 class WalletController extends Controller
 {
+    protected WalletService $walletService;
+
+    public function __construct(WalletService $walletService)
+    {
+        $this->walletService = $walletService;
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        return Wallet::all();
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        // Not used for API
+        return $this->walletService->index();
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreWalletRequest $request)
     {
-        $data = $request->validate([
-            'balance' => 'required|numeric',
-        ]);
-        $data['user_id'] = $request->user()->id;
-        $wallet = Wallet::create($data);
-        return response()->json($wallet, 201);
+        return $this->walletService->store($request->user(), $request->validated());
     }
 
     /**
@@ -42,27 +39,15 @@ class WalletController extends Controller
      */
     public function show(Wallet $wallet)
     {
-        return $wallet;
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Wallet $wallet)
-    {
-        // Not used for API
+        return $this->walletService->show($wallet);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Wallet $wallet)
+    public function update(UpdateWalletRequest $request, Wallet $wallet)
     {
-        $data = $request->validate([
-            'balance' => 'sometimes|numeric',
-        ]);
-        $wallet->update($data);
-        return response()->json($wallet);
+        return $this->walletService->update($wallet, $request->validated());
     }
 
     /**
@@ -70,58 +55,29 @@ class WalletController extends Controller
      */
     public function destroy(Wallet $wallet)
     {
-        $wallet->delete();
-        return response()->json(['message' => 'Deleted']);
+        return $this->walletService->destroy($wallet);
     }
 
     /**
      * Top up the wallet balance.
      */
-    public function topup(Request $request)
+    public function topup(TopupWalletRequest $request)
     {
-        $request->validate(['amount' => 'required|numeric|min:1']);
-        $wallet = Wallet::where('user_id', $request->user()->id)->firstOrFail();
-        $wallet->balance += $request->amount;
-        $wallet->save();
-
-        // Create transaction record
-        Transaction::create([
-            'wallet_id' => $wallet->id,
-            'type' => 'topup',
-            'amount' => $request->amount,
-            'reference' => null,
-            'related_user_id' => null,
-            'meta' => null,
-            'status' => 'completed',
-        ]);
-
-        return response()->json($wallet);
+        return $this->walletService->topup($request->user(), $request->validated());
     }
 
     /**
      * Withdraw from the wallet balance.
      */
-    public function withdraw(Request $request)
+    public function withdraw(WithdrawWalletRequest $request)
     {
-        $request->validate(['amount' => 'required|numeric|min:1']);
-        $wallet = Wallet::where('user_id', $request->user()->id)->firstOrFail();
-        if ($wallet->balance < $request->amount) {
-            return response()->json(['error' => 'Insufficient balance'], 400);
-        }
-        $wallet->balance -= $request->amount;
-        $wallet->save();
-
-        // Create transaction record
-        Transaction::create([
-            'wallet_id' => $wallet->id,
-            'type' => 'withdraw',
-            'amount' => $request->amount,
-            'reference' => null,
-            'related_user_id' => null,
-            'meta' => null,
-            'status' => 'completed',
-        ]);
-
-        return response()->json($wallet);
+        return $this->walletService->withdraw($request->user(), $request->validated());
     }
+
+    /**
+     * Not used for API - form-based actions.
+     */
+    public function create() { /* Not used in API */ }
+
+    public function edit(Wallet $wallet) { /* Not used in API */ }
 }
