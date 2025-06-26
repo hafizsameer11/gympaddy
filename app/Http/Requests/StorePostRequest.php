@@ -17,10 +17,34 @@ class StorePostRequest extends FormRequest
     public function rules()
     {
         return [
-            'title' => 'required|string|max:255',
-            'content' => 'required|string',
-            'media_url' => 'nullable|url',
+            'title' => 'nullable|string|max:255',
+            'content' => 'nullable|string',
+            'media' => 'nullable|array|max:10',
+            'media.*' => 'file|mimes:jpeg,jpg,png,gif,mp4,mov,avi,wmv,flv|max:102400', // 100MB max
         ];
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            // Ensure at least content or media is provided
+            if (empty($this->content) && empty($this->media)) {
+                $validator->errors()->add('content', 'Either content or media must be provided.');
+            }
+
+            // Ensure only one video per post
+            if ($this->hasFile('media')) {
+                $videoCount = 0;
+                foreach ($this->file('media') as $file) {
+                    if (str_starts_with($file->getMimeType(), 'video/')) {
+                        $videoCount++;
+                    }
+                }
+                if ($videoCount > 1) {
+                    $validator->errors()->add('media', 'Only one video file is allowed per post.');
+                }
+            }
+        });
     }
 
     protected function failedValidation(Validator $validator)

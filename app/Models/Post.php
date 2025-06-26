@@ -44,4 +44,9 @@ class Post extends Model
     {
         return $this->morphMany(Impression::class, 'impressionable');
     }
+
+    public function media()
+    {
+        return $this->hasMany(PostMedia::class)->orderBy('order');
+    }
 }

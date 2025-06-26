@@ -28,7 +28,14 @@ class PostController extends Controller
     public function store(StorePostRequest $request)
     {
         $user = Auth::user();
-        return $this->postService->store($user, $request->validated());
+        $validated = $request->validated();
+        
+        // Add media files to validated data
+        if ($request->hasFile('media')) {
+            $validated['media'] = $request->file('media');
+        }
+        
+        return $this->postService->store($user, $validated);
     }
 
     public function show(Post $post)
