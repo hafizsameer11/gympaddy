@@ -6,6 +6,8 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Requests\ForgotPasswordRequest;
 use App\Http\Requests\VerifyOtpRequest;
+use App\Http\Requests\ResetPasswordRequest;
+
 use App\Services\AuthService;
 
 class AuthController extends Controller
@@ -39,5 +41,9 @@ class AuthController extends Controller
     public function verifyOtp(VerifyOtpRequest $request)
     {
         return $this->authService->verifyOtp($request->validated());
+    }
+    public function resetPassword(ResetPasswordRequest $request)
+    {
+        return $this->authService->resetPassword($request->validated());
     }
 }

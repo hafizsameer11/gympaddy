@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('businesses', function (Blueprint $table) {
-            //
+            $table->string('registration_number')->nullable()->change();
+            $table->dropUnique(['registration_number']);
+            $table->unique('registration_number');
         });
     }
 
@@ -22,7 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('businesses', function (Blueprint $table) {
-            //
+            $table->string('registration_number')->nullable(false)->change();
         });
     }
 };
