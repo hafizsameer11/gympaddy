@@ -14,9 +14,14 @@ class MarketplaceListing extends Model
         'category_id',
         'title',
         'description',
+        'location',
         'price',
         'status', // pending, running, closed
-        'media_url',
+        'media_urls',
+    ];
+
+    protected $casts = [
+        'media_urls' => 'array',
     ];
 
     public function user()

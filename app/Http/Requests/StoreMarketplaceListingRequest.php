@@ -16,12 +16,13 @@ class StoreMarketplaceListingRequest extends FormRequest
     public function rules()
     {
         return [
-            'title' => 'required|string|max:255',
+            'product_name' => 'required|string|max:255',
             'description' => 'required|string',
-            'category_id' => 'required|integer|exists:marketplace_categories,id',
+            'category_id' => '``nullable``|integer|exists:marketplace_categories,id',
             'price' => 'required|numeric|min:0.01',
-            'status' => 'required|in:pending,running,closed',
-            // ...add other fields and constraints as needed...
+            'location' => 'required|string|max:255',
+            'media_files' => 'required|array|max:4',
+            'media_files.*' => 'file|image|mimes:jpeg,png,jpg,webp|max:5120', // max 5MB per file
         ];
     }
 
@@ -32,7 +33,7 @@ class StoreMarketplaceListingRequest extends FormRequest
             'status' => 'error',
             'code' => 422,
             'message' => 'Validation Failed',
-            'errors' => collect($validator->errors())->map(function($messages, $field) {
+            'errors' => collect($validator->errors())->map(function ($messages, $field) {
                 return [
                     'field' => $field,
                     'reason' => $messages[0],
