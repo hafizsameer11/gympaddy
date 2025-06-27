@@ -15,13 +15,15 @@ class StoreBusinessRequest extends FormRequest
     public function rules()
     {
         return [
-            'name' => 'required|string|max:255',
-            'registration_number' => 'nullable|string|max:100',
+            'business_name' => 'required|string|max:255',
+            'category' => 'required|string|max:255',
+            'address' => 'required|string',
+            'business_email' => 'required|email|max:255',
+            'business_phone' => 'required|string|max:30',
             'description' => 'nullable|string',
-            'status' => 'nullable|string|in:pending,approved,rejected',
+            'photo' => 'nullable|image|max:2048',
         ];
     }
-
 
     protected function failedValidation(Validator $validator)
     {

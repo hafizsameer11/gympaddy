@@ -27,6 +27,7 @@ class User extends Authenticatable
         'password',
         'role', // 'user' or 'admin'
         'profile_picture',
+        'device_token',
     ];
 
     /**
@@ -95,6 +96,11 @@ class User extends Authenticatable
     }
 
     protected $appends = ['profile_picture_url'];
+
+    public function notifications()
+    {
+        return $this->hasMany(\App\Models\Notification::class);
+    }
 
     // ...add other relationships as needed...
 }

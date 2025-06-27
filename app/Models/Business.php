@@ -9,14 +9,17 @@ class Business extends Model
 {
     use HasFactory;
 
- protected $fillable = [
-    'user_id',
-    'name',
-    'description',
-    'registration_number', // ← this was missing
-    'status',
-];
-
+    protected $fillable = [
+        'user_id',
+        'business_name',
+        'category',
+        'address',
+        'business_email',
+        'business_phone',
+        'photo',
+        'description',
+        // 'status' is not fillable by user, only by admin
+    ];
 
     public function user()
     {

@@ -87,4 +87,19 @@ class UserController extends Controller
             'user' => $user
         ]);
     }
+
+    /**
+     * Update device token
+     */
+    public function updateDeviceToken(Request $request)
+    {
+        $request->validate([
+            'device_token' => 'required|string|max:255',
+        ]);
+        $user = Auth::user();
+        $user->device_token = $request->device_token;
+        $user->save();
+
+        return response()->json(['message' => 'Device token updated']);
+    }
 }

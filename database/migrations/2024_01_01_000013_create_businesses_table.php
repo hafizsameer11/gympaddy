@@ -10,9 +10,13 @@ return new class extends Migration {
         Schema::create('businesses', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('name');
-            $table->string('registration_number')->unique();
-            $table->text('description')->nullable(); // ✅ Added to fix the error
+            $table->string('business_name');
+            $table->string('category');
+            $table->text('address');
+            $table->string('business_email');
+            $table->string('business_phone');
+            $table->string('photo')->nullable();
+            $table->text('description')->nullable();
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->timestamps();
         });

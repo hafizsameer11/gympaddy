@@ -59,6 +59,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     // User Profile
     Route::get('profile', [UserController::class, 'profile']);
     Route::post('edit-profile', [UserController::class, 'editProfile']);
+    Route::post('device-token', [UserController::class, 'updateDeviceToken']); // <-- add this
 
     // Posts
     Route::get('posts', [PostController::class, 'index']);
@@ -169,6 +170,8 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::get('notifications/{notification}', [NotificationController::class, 'show']);
     Route::put('notifications/{notification}', [NotificationController::class, 'update']);
     Route::delete('notifications/{notification}', [NotificationController::class, 'destroy']);
+    Route::get('notifications/unread', [NotificationController::class, 'unread']); // <-- add this
+    Route::post('notifications/{notification}/mark-read', [NotificationController::class, 'markRead']); // <-- add this
 
     // Chat Messages
     Route::get('chat-messages', [ChatMessageController::class, 'index']);
