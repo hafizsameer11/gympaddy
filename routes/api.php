@@ -3,6 +3,7 @@
 use App\Http\Controllers\PersonalAccessTokenController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\AdminController;
@@ -55,6 +56,10 @@ Route::post('auth/verify-otp', [AuthController::class, 'verifyOtp']);
 Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {
+    // User Profile
+    Route::get('profile', [UserController::class, 'profile']);
+    Route::post('edit-profile', [UserController::class, 'editProfile']);
+
     // Posts
     Route::get('posts', [PostController::class, 'index']);
     Route::post('posts', [PostController::class, 'store']);

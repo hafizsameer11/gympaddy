@@ -26,6 +26,7 @@ class User extends Authenticatable
         'gender',
         'password',
         'role', // 'user' or 'admin'
+        'profile_picture',
     ];
 
     /**
@@ -82,6 +83,18 @@ class User extends Authenticatable
     {
         return $this->hasOne(UserProfile::class);
     }
+
+    /**
+     * Get the full URL for the profile picture
+     */
+    public function getProfilePictureUrlAttribute()
+    {
+        return $this->profile_picture 
+            ? asset('storage/' . $this->profile_picture)
+            : null;
+    }
+
+    protected $appends = ['profile_picture_url'];
 
     // ...add other relationships as needed...
 }

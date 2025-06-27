@@ -551,6 +551,66 @@ All `/api/user/*` endpoints require the `Authorization: Bearer {token}` header. 
     ```
 - **DELETE** `/api/user/video-calls/{video_call}`
 
----
+#### User Profile
 
-For each endpoint, use the appropriate HTTP method, set the URL, add the Bearer token for authentication, and provide the required JSON body for POST/PUT requests. Adjust IDs and field values as needed for your tests.
+- **GET** `/api/user/profile`
+  - Returns the current authenticated user's profile
+  - Headers: `Authorization: Bearer {token}`
+
+- **POST** `/api/user/edit-profile`
+  - Updates user profile with optional image upload
+  - Headers: `Authorization: Bearer {token}`, `Content-Type: multipart/form-data`
+  - Body (multipart/form-data):
+    ```
+    username: johndoe_updated (optional)
+    fullname: John Doe Updated (optional)
+    age: 26 (optional)
+    gender: male (optional, values: male|female|other)
+    profile_picture: [file] (optional, max 2MB, formats: jpeg,jpg,png,gif)
+    ```
+
+#### Storage Setup
+
+Before testing file uploads, run the following command to create symbolic links for public storage access:
+
+```bash
+php artisan storage:link
+```
+
+This creates a symbolic link from `public/storage` to `storage/app/public`, making uploaded files publicly accessible via URLs like `http://yourapp.com/storage/profile_pictures/filename.jpg`.
+
+#### Example Profile Edit Request (Postman)
+
+1. Set method to `POST`
+2. URL: `http://yourapp.com/api/user/edit-profile`
+3. Headers:
+   - `Authorization: Bearer {your_token}`
+4. Body (form-data):
+   - Key: `username`, Value: `johndoe_updated`
+   - Key: `fullname`, Value: `John Doe Updated`
+   - Key: `age`, Value: `26`
+   - Key: `gender`, Value: `male`
+   - Key: `profile_picture`, Type: File, Value: [select image file]
+
+#### Response Format
+
+```json
+{
+  "status": "success",
+  "message": "Profile updated successfully",
+  "user": {
+    "id": 1,
+    "username": "johndoe_updated",
+    "fullname": "John Doe Updated",
+    "email": "john@example.com",
+    "phone": "1234567890",
+    "age": 26,
+    "gender": "male",
+    "role": "user",
+    "profile_picture": "profile_pictures/1703123456_abc123.jpg",
+    "profile_picture_url": "http://yourapp.com/storage/profile_pictures/1703123456_abc123.jpg",
+    "created_at": "2024-01-01T00:00:00.000000Z",
+    "updated_at": "2024-01-01T12:30:45.000000Z"
+  }
+}
+```
