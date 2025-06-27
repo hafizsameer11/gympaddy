@@ -18,13 +18,14 @@ class StoreMarketplaceListingRequest extends FormRequest
         return [
             'product_name' => 'required|string|max:255',
             'description' => 'required|string',
-            'category_id' => '``nullable``|integer|exists:marketplace_categories,id',
+            'category_id' => 'nullable|integer|exists:marketplace_categories,id',
             'price' => 'required|numeric|min:0.01',
             'location' => 'required|string|max:255',
             'media_files' => 'required|array|max:4',
-            'media_files.*' => 'file|image|mimes:jpeg,png,jpg,webp|max:5120', // max 5MB per file
+            'media_files.*' => 'file|image|mimes:jpeg,png,jpg,webp|max:5120', // 5MB per image
         ];
     }
+
 
     protected function failedValidation(Validator $validator)
     {

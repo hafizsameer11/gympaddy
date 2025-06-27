@@ -4,16 +4,20 @@ namespace App\Services;
 
 use App\Models\MarketplaceListing;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Resources\MarketplaceListingResource;
 
 class MarketplaceListingService
 {
     public function index()
     {
-        return MarketplaceListing::all();
+        return MarketplaceListingResource::collection(
+            MarketplaceListing::with(['category', 'user'])->get()
+        );
     }
 
     public function store($user, $validated)
     {
+        
         // Map product_name to title
         $data = $validated;
         $data['title'] = $data['product_name'];
@@ -43,10 +47,12 @@ class MarketplaceListingService
         ], 201);
     }
 
-    public function show(MarketplaceListing $marketplaceListing)
-    {
-        return $marketplaceListing;
-    }
+  public function show(MarketplaceListing $marketplaceListing)
+{
+    $marketplaceListing->load(['category', 'user']);
+    return new MarketplaceListingResource($marketplaceListing);
+}
+
 
     public function update(MarketplaceListing $marketplaceListing, $validated)
     {
