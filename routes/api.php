@@ -179,6 +179,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::get('chat-messages/{chat_message}', [ChatMessageController::class, 'show']);
     Route::put('chat-messages/{chat_message}', [ChatMessageController::class, 'update']);
     Route::delete('chat-messages/{chat_message}', [ChatMessageController::class, 'destroy']);
+    Route::get('chat-conversations', [\App\Http\Controllers\ChatMessageController::class, 'conversations']);
 
     // Tickets
     Route::get('tickets', [TicketController::class, 'index']);
