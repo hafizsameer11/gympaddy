@@ -13,12 +13,12 @@ return new class extends Migration
     {
         Schema::table('businesses', function (Blueprint $table) {
             // Drop old/unused columns
-            if (Schema::hasColumn('businesses', 'name')) {
-                $table->dropColumn('name');
-            }
-            if (Schema::hasColumn('businesses', 'registration_number')) {
-                $table->dropColumn('registration_number');
-            }
+            // if (Schema::hasColumn('businesses', 'name')) {
+            //     $table->dropColumn('name');
+            // }
+            // if (Schema::hasColumn('businesses', 'registration_number')) {
+            //     $table->dropColumn('registration_number');
+            // }
 
             // Add new fields
             $table->string('business_name')->after('user_id');
