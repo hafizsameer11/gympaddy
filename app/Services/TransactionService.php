@@ -39,6 +39,15 @@ class TransactionService
     public function getForUser($userId)
     {
         $wallets = Wallet::where('user_id', $userId)->orderBy('created_at', 'desc')->pluck('id');
-        return Transaction::whereIn('wallet_id', $wallets)->get();
+        $transactions= Transaction::whereIn('wallet_id', $wallets)->get();
+        $totalTopup = $transactions->where('type', 'topup')->sum('amount');
+        $totalWithdraw = $transactions->where('type', 'withdraw')->sum('amount');
+        $currentBalance=$wallets->balance ?? 0;
+        return [
+            'transactions' => $transactions,
+            'totalTopup' => $totalTopup,
+            'totalWithdraw' => $totalWithdraw,
+            'currentBalance' => $currentBalance,
+        ];
     }
 }
