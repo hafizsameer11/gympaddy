@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
@@ -8,7 +9,14 @@ class Post extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'title', 'content', 'media_url', 'media_type'];
+    protected $fillable = [
+        'user_id',
+        'title',
+        'content',
+        'media_url',
+        'media_type',
+        'is_boosted',
+    ];
 
     public function user()
     {
@@ -48,5 +56,10 @@ class Post extends Model
     public function media()
     {
         return $this->hasMany(PostMedia::class)->orderBy('order');
+    }
+
+    public function boostedCampaign()
+    {
+        return $this->hasOne(AdCampaign::class, 'post_id');
     }
 }

@@ -24,6 +24,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ChatMessageController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\VideoCallController;
+use App\Http\Controllers\BoostController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -121,6 +122,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::get('marketplace-listings/{marketplace_listing}', [MarketplaceListingController::class, 'show']);
     Route::put('marketplace-listings/{marketplace_listing}', [MarketplaceListingController::class, 'update']);
     Route::delete('marketplace-listings/{marketplace_listing}', [MarketplaceListingController::class, 'destroy']);
+    Route::get('marketplace-listings/latest', [MarketplaceListingController::class, 'latest']);
 
     // Marketplace Categories
     Route::get('marketplace-categories', [MarketplaceCategoryController::class, 'index']);
@@ -194,6 +196,9 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::get('video-calls/{video_call}', [VideoCallController::class, 'show']);
     Route::put('video-calls/{video_call}', [VideoCallController::class, 'update']);
     Route::delete('video-calls/{video_call}', [VideoCallController::class, 'destroy']);
+
+    // Boost Posts
+    Route::post('boost-post/{post}', [BoostController::class, 'boost']);
 });
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {

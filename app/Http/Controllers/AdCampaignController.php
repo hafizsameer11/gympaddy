@@ -19,9 +19,13 @@ class AdCampaignController extends Controller
     /**
      * Display a listing of the resource.
      */
+    // public function index()
+    // {
+    //     return $this->adCampaignService->index();
+    // }
     public function index()
     {
-        return $this->adCampaignService->index();
+        return $this->adCampaignService->getBoostedCampaigns();
     }
 
     /**

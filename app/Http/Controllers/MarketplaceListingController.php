@@ -24,6 +24,11 @@ class MarketplaceListingController extends Controller
         return $this->marketplaceListingService->index();
     }
 
+  public function latest()
+{
+    return $this->marketplaceListingService->latest();
+}
+
     /**
      * Show the form for creating a new resource.
      */

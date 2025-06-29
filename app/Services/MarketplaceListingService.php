@@ -17,7 +17,7 @@ class MarketplaceListingService
 
     public function store($user, $validated)
     {
-        
+
         // Map product_name to title
         $data = $validated;
         $data['title'] = $data['product_name'];
@@ -47,12 +47,20 @@ class MarketplaceListingService
         ], 201);
     }
 
-  public function show(MarketplaceListing $marketplaceListing)
-{
-    $marketplaceListing->load(['category', 'user']);
-    return new MarketplaceListingResource($marketplaceListing);
-}
+    public function show(MarketplaceListing $marketplaceListing)
+    {
+        $marketplaceListing->load(['category', 'user']);
+        $resource = new MarketplaceListingResource($marketplaceListing);
+        $data = $resource->toArray(request());
 
+        // Add sender_id and receiver_id at the end
+        $data['sender_id'] = auth()->id();
+        $data['receiver_id'] = $marketplaceListing->user_id;
+
+        return response()->json([
+            'data' => $data
+        ]);
+    }
 
     public function update(MarketplaceListing $marketplaceListing, $validated)
     {
@@ -65,4 +73,30 @@ class MarketplaceListingService
         $marketplaceListing->delete();
         return response()->json(['message' => 'Deleted']);
     }
+
+    public function latest()
+    {
+        $latestListings = MarketplaceListing::with(['category', 'user'])
+            ->latest()
+            ->take(2)
+            ->get();
+
+        if ($latestListings->isEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'MarketplaceListing not found',
+                'code' => 404
+            ], 404);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'code' => 200,
+            'data' => MarketplaceListingResource::collection($latestListings)
+        ]);
+    }
+
+
+
+
 }
