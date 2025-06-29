@@ -72,6 +72,7 @@ Route::put('personal-access-tokens/{id}', [PersonalAccessTokenController::class,
 Route::delete('personal-access-tokens/{id}', [PersonalAccessTokenController::class, 'destroy']);
 
 Route::post('auth/login', [AuthController::class, 'login']);
+Route::post('auth/admin/login', [AuthController::class, 'adminLogin']);
 Route::post('auth/register', [AuthController::class, 'register']);
 Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('auth/verify-otp', [AuthController::class, 'verifyOtp']);
@@ -218,7 +219,5 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
-    Route::get('dashboard', [AdminController::class, 'dashboard']);
-    Route::apiResource('users', AdminUserController::class);
-    // ...other admin endpoints...
+   
 });

@@ -24,6 +24,10 @@ class AuthController extends Controller
     {
         return $this->authService->login($request->validated());
     }
+    public function adminLogin(LoginRequest $request)
+    {
+        return $this->authService->adminLogin($request->validated());
+    }
 
     // User registration
     public function register(RegisterRequest $request)

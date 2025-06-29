@@ -28,6 +28,26 @@ class AuthService
         }
         return response()->json(['message' => 'Invalid credentials'], 401);
     }
+    public function adminLogin($validated)
+    {
+        $credentials = [
+            'email' => $validated['email'],
+            'password' => $validated['password'],
+        ];
+        if (Auth::attempt($credentials)) {
+            $user = Auth::user();
+            if ($user->role != 'admin') {
+                return response()->json(['message' => 'you are not admin'], 401);
+            }
+            $token = $user->createToken('auth_token')->plainTextToken;
+            return response()->json([
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+                'user' => $user,
+            ]);
+        }
+        return response()->json(['message' => 'Invalid credentials'], 401);
+    }
 
     public function register($validated)
     {
