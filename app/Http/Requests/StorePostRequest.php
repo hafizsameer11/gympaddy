@@ -54,7 +54,7 @@ class StorePostRequest extends FormRequest
             'status' => 'error',
             'code' => 422,
             'message' => 'Validation Failed',
-            'errors' => collect($validator->errors())->map(function($messages, $field) {
+            'errors' => collect($validator->errors())->map(function ($messages, $field) {
                 return [
                     'field' => $field,
                     'reason' => $messages[0],

@@ -95,8 +95,25 @@ class MarketplaceListingService
             'data' => MarketplaceListingResource::collection($latestListings)
         ]);
     }
+    public function getForUser($userId)
+    {
+        $listings = MarketplaceListing::with(['category', 'user'])
+            ->where('user_id', $userId)
+            ->get();
+        $totalListings = $listings->count();
+        $runningListing=MarketplaceListing::where('user_id', $userId)
+            ->where('status', 'running')
+            ->count();
+        $completedListing=MarketplaceListing::where('user_id', $userId)
+            ->where('status', 'completed')
+            ->count();
+            $data=[
+            'total_listings' => $totalListings,
+            'running_listings' => $runningListing,
+            'completed_listings' => $completedListing,
+            'listings'=>$listings
+        ];
+            return $data;
 
-
-
-
+    }
 }

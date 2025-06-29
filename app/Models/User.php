@@ -90,7 +90,7 @@ class User extends Authenticatable
      */
     public function getProfilePictureUrlAttribute()
     {
-        return $this->profile_picture 
+        return $this->profile_picture
             ? asset('storage/' . $this->profile_picture)
             : null;
     }
@@ -103,8 +103,13 @@ class User extends Authenticatable
     }
     public function transactions()
     {
-        return $this->hasMany(Transaction::class,'related_user_id');
+        return $this->hasMany(Transaction::class, 'related_user_id');
     }
+    public function statuses()
+    {
+        return $this->hasMany(Status::class);
+    }
+
 
     // ...add other relationships as needed...
 }

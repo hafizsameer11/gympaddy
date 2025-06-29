@@ -3,14 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\MarketplaceListingService;
 use Illuminate\Http\Request;
 use App\Services\UserService;
 
 class UserManagementController extends Controller
 {
-    protected $userService;
+    protected $userService,$marketplaceListingService;
 
-    public function __construct(UserService $userService)
+    public function __construct(UserService $userService, MarketplaceListingService $marketplaceListingService)
     {
         $this->userService = $userService;
     }
@@ -58,4 +59,13 @@ class UserManagementController extends Controller
     public function deleteUser($id){
 
     }
+
+    public function getmarketPlaceListingForUser($userId){
+    try {
+        $listings = $this->marketplaceListingService->getForUser($userId);
+        return response()->json(['message' => 'Marketplace listings retrieved successfully', 'data' => $listings, 'status' => 'success']);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Error retrieving marketplace listings', 'error' => $e->getMessage()], 500);
+    }
+}
 }
