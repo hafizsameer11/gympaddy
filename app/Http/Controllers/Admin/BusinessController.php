@@ -45,7 +45,7 @@ class BusinessController extends Controller
             $business->rejected_reason = null; // Clear rejected reason if status is not rejected
             $business->save();
 
-            return response()->json(['message' => 'Business status updated successfully', 'data' => $business, 'status' => 'success']);
         }
+        return response()->json(['message' => 'Business status updated successfully', 'data' => $business, 'status' => 'success']);
     }
 }
