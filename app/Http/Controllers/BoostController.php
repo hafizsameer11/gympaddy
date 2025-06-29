@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MarketplaceListing;
 use App\Models\Post;
 use App\Services\AdCampaignService;
 use Illuminate\Http\Request;
@@ -17,11 +18,44 @@ class BoostController extends Controller
         $this->adCampaignService = $adCampaignService;
     }
 
-  public function boostPost($postId)
+  public function boostPost(Request $request,  $postId)
 {
     $user = Auth::user();
     $post = Post::findOrFail($postId);
+   $payload = $request->validate([
+        'name'          => 'nullable|string|max:255',
+        'title'         => 'nullable|string|max:255',
+        'content'       => 'nullable|string',
+        'media_url'     => 'nullable|url',
+        'budget'        => 'required|numeric|min:1',
+        'daily_budget'  => 'nullable|numeric|min:1',
+        'duration'      => 'nullable|integer|min:1',
+        'location'      => 'nullable|string|max:255',
+        'age_min'       => 'nullable|integer|min:13|max:100',
+        'age_max'       => 'nullable|integer|min:13|max:100',
+        'gender'        => 'nullable|in:all,male,female',
+    ]);
+    return $this->adCampaignService->boostFromPost($user, $post, $payload);
+}
+public function boostMarketplaceListing(Request $request, $listingId)
+{
+    $user = Auth::user();
+    $listing = MarketplaceListing::findOrFail($listingId);
 
-    return $this->adCampaignService->boostFromPost($user, $post, []);
+    $payload = $request->validate([
+        'name'          => 'nullable|string|max:255',
+        'title'         => 'nullable|string|max:255',
+        'content'       => 'nullable|string',
+        'media_url'     => 'nullable|url',
+        'budget'        => 'required|numeric|min:1',
+        'daily_budget'  => 'nullable|numeric|min:1',
+        'duration'      => 'nullable|integer|min:1',
+        'location'      => 'nullable|string|max:255',
+        'age_min'       => 'nullable|integer|min:13|max:100',
+        'age_max'       => 'nullable|integer|min:13|max:100',
+        'gender'        => 'nullable|in:all,male,female',
+    ]);
+
+    return $this->adCampaignService->boostFromMarketplaceListing($user, $listing, $payload);
 }
 }
