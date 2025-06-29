@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Facades\Log;
 
 class StoreFollowRequest extends FormRequest
 {
@@ -24,12 +25,12 @@ class StoreFollowRequest extends FormRequest
 
     protected function failedValidation(Validator $validator)
     {
-        \Log::warning('Follow creation validation failed', ['errors' => $validator->errors()]);
+        Log::warning('Follow creation validation failed', ['errors' => $validator->errors()]);
         throw new HttpResponseException(response()->json([
             'status' => 'error',
             'code' => 422,
             'message' => 'Validation Failed',
-            'errors' => collect($validator->errors())->map(function($messages, $field) {
+            'errors' => collect($validator->errors())->map(function ($messages, $field) {
                 return [
                     'field' => $field,
                     'reason' => $messages[0],

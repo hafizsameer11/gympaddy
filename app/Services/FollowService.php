@@ -13,6 +13,17 @@ class FollowService
 
     public function store($validated)
     {
+        $data = $validated;
+        if ($data['follower_id'] == $data['followed_id']) {
+            return response()->json(['message' => 'You cannot follow yourself'], 400);
+        }
+        //check if the follow relationship already exists
+        if (Follow::where('follower_id', $data['follower_id'])
+            ->where('followed_id', $data['followed_id'])
+            ->exists()
+        ) {
+            return response()->json(['message' => 'You are already following this user'], 409);
+        }
         $follow = Follow::create($validated);
         return response()->json($follow, 201);
     }
@@ -28,9 +39,15 @@ class FollowService
         return response()->json($follow);
     }
 
-    public function destroy(Follow $follow)
+    public function destroy($id)
     {
+        //get the follow relationship by id
+        $follow = Follow::findOrFail($id);
         $follow->delete();
-        return response()->json(['message' => 'Deleted']);
+        return response()->json(['message' => 'Deleted', 'status' => 'success'], 200);
+    }
+    public function getFollowers($userId)
+    {
+        return Follow::where('followed_id', $userId)->with('follower')->get();
     }
 }
