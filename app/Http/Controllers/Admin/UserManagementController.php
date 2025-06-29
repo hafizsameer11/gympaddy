@@ -14,6 +14,7 @@ class UserManagementController extends Controller
     public function __construct(UserService $userService, MarketplaceListingService $marketplaceListingService)
     {
         $this->userService = $userService;
+        $this->marketplaceListingService = $marketplaceListingService;
     }
     public function index()
     {
