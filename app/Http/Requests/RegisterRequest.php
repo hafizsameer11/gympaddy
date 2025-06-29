@@ -23,6 +23,7 @@ class RegisterRequest extends FormRequest
             'age' => 'required|integer|min:1',
             'gender' => 'required|string|in:male,female,other',
             'password' => 'required|string|min:6|confirmed',
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ];
     }
 
