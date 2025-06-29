@@ -39,4 +39,17 @@ class UserManagementController extends Controller
         return response()->json(['message' => 'Error retrieving user details', 'error' => $e->getMessage()], 500);
     }
     }
+    public function socialData($id)
+    {
+
+    }
+    public function marketPlaceData($id){
+
+    }
+    public function edit(Request $request, $id){
+
+    }
+    public function deleteUser($id){
+        
+    }
 }
