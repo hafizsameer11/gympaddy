@@ -18,6 +18,7 @@ class Business extends Model
         'business_phone',
         'photo',
         'description',
+        'status'
         // 'status' is not fillable by user, only by admin
     ];
 
