@@ -47,28 +47,9 @@ class AdminUserController extends Controller
     {
         return $this->userService->destroy($id);
     }
+ 
 }
-        $data = $request->validate([
-            'username' => 'sometimes|string|unique:users,username,' . $user->id,
-            'fullname' => 'sometimes|string',
-            'email' => 'sometimes|email|unique:users,email,' . $user->id,
-            'phone' => 'sometimes|string|unique:users,phone,' . $user->id,
-            'age' => 'nullable|integer',
-            'gender' => 'nullable|in:male,female,other',
-            'password' => 'sometimes|string|min:6',
-            'role' => 'nullable|string',
-        ]);
-        if (isset($data['password'])) {
-            $data['password'] = bcrypt($data['password']);
-        }
-        $user->update($data);
-        return response()->json($user);
-    }
 
-    public function destroy($id)
-    {
-        $user = User::findOrFail($id);
-        $user->delete();
-        return response()->json(['message' => 'Deleted']);
-    }
-}
+
+  
+

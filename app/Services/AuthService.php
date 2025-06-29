@@ -28,9 +28,37 @@ class AuthService
         }
         return response()->json(['message' => 'Invalid credentials'], 401);
     }
+    public function adminLogin($validated)
+    {
+        $credentials = [
+            'email' => $validated['email'],
+            'password' => $validated['password'],
+        ];
+        if (Auth::attempt($credentials)) {
+            $user = Auth::user();
+            if ($user->role != 'admin') {
+                return response()->json(['message' => 'you are not admin'], 401);
+            }
+            $token = $user->createToken('auth_token')->plainTextToken;
+            return response()->json([
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+                'user' => $user,
+            ]);
+        }
+        return response()->json(['message' => 'Invalid credentials'], 401);
+    }
 
     public function register($validated)
     {
+        //check for profile_picture
+        if (isset($validated['profile_picture'])) {
+            $profilePicture = $validated['profile_picture'];
+            $path = $profilePicture->store('profile_pictures', 'public');
+            $validated['profile_picture'] = $path; // Store the path in the database
+        } else {
+            $validated['profile_picture'] = null; // Set to null if no picture is uploaded
+        }
         $user = User::create([
             'username' => $validated['username'],
             'fullname' => $validated['fullname'],
@@ -39,6 +67,7 @@ class AuthService
             'age' => $validated['age'],
             'gender' => $validated['gender'],
             'password' => Hash::make($validated['password']),
+            'profile_picture' => $validated['profile_picture'],
         ]);
         $token = $user->createToken('auth_token')->plainTextToken;
         return response()->json([

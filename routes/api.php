@@ -8,6 +8,7 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\GiftController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\BusinessController;
@@ -27,17 +28,39 @@ use App\Http\Controllers\VideoCallController;
 use App\Http\Controllers\BoostController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 
 /*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-|
+|gity
 | Here is where you can register API routes for your application. These
 | routes are loaded by the RouteServiceProvider and all of them will
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+Route::get('/optimize-app', function () {
+    Artisan::call('optimize:clear'); // Clears cache, config, route, and view caches
+    Artisan::call('cache:clear');    // Clears application cache
+    Artisan::call('config:clear');   // Clears configuration cache
+    Artisan::call('route:clear');    // Clears route cache
+    Artisan::call('view:clear');     // Clears compiled Blade views
+    Artisan::call('config:cache');   // Rebuilds configuration cache
+    Artisan::call('route:cache');    // Rebuilds route cache
+    Artisan::call('view:cache');     // Precompiles Blade templates
+    Artisan::call('optimize');       // Optimizes class loading
+
+    return "Application optimized and caches cleared successfully!";
+});
+Route::get('/migrate', function () {
+    Artisan::call('migrate');
+    return response()->json(['message' => 'Migration successful'], 200);
+});
+Route::get('/migrate/rollback', function () {
+    Artisan::call('migrate:rollback');
+    return response()->json(['message' => 'Migration rollback successfully'], 200);
+});
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -51,6 +74,7 @@ Route::put('personal-access-tokens/{id}', [PersonalAccessTokenController::class,
 Route::delete('personal-access-tokens/{id}', [PersonalAccessTokenController::class, 'destroy']);
 
 Route::post('auth/login', [AuthController::class, 'login']);
+Route::post('auth/admin/login', [AuthController::class, 'adminLogin']);
 Route::post('auth/register', [AuthController::class, 'register']);
 Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('auth/verify-otp', [AuthController::class, 'verifyOtp']);
@@ -201,8 +225,9 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('boost-post/{post}', [BoostController::class, 'boost']);
 });
 
-Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
-    Route::get('dashboard', [AdminController::class, 'dashboard']);
-    Route::apiResource('users', AdminUserController::class);
-    // ...other admin endpoints...
+Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
+   Route::group(['prefix' => 'user-management'], function () {
+       Route::get('/', [UserManagementController::class, 'index']);
+       Route::get('details/{id}', [UserManagementController::class, 'userDetails']);
+   });
 });

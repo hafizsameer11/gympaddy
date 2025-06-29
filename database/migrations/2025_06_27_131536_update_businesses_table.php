@@ -21,12 +21,12 @@ return new class extends Migration
             // }
 
             // Add new fields
-            $table->string('business_name')->after('user_id');
-            $table->string('category')->after('business_name');
-            $table->text('address')->after('category');
-            $table->string('business_email')->after('address');
-            $table->string('business_phone')->after('business_email');
-            $table->string('photo')->nullable()->after('business_phone');
+            // $table->string('business_name')->after('user_id');
+            // $table->string('category')->after('business_name');
+            // $table->text('address')->after('category');
+            // $table->string('business_email')->after('address');
+            // $table->string('business_phone')->after('business_email');
+            // $table->string('photo')->nullable()->after('business_phone');
         });
     }
 
