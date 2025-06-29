@@ -225,7 +225,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::delete('video-calls/{video_call}', [VideoCallController::class, 'destroy']);
 
     // Boost Posts
-    Route::post('boost-post/{post}', [BoostController::class, 'boost']);
+    Route::post('boost-post/{postId}', [BoostController::class, 'boost']);
 });
 
 // Agora video/voice call endpoints

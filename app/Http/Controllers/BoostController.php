@@ -17,9 +17,10 @@ class BoostController extends Controller
         $this->adCampaignService = $adCampaignService;
     }
 
-  public function boost(Post $post)
+  public function boostPost($postId)
 {
     $user = Auth::user();
+    $post = Post::findOrFail($postId);
 
     return $this->adCampaignService->boostFromPost($user, $post, []);
 }
