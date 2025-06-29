@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Transaction;
+use App\Models\User;
+use App\Models\Wallet;
 
 class TransactionService
 {
@@ -33,5 +35,10 @@ class TransactionService
     {
         $transaction->delete();
         return response()->json(['message' => 'Deleted']);
+    }
+    public function getForUser($userId)
+    {
+        $wallets = Wallet::where('user_id', $userId)->orderBy('created_at', 'desc')->pluck('id');
+        return Transaction::whereIn('wallet_id', $wallets)->get();
     }
 }

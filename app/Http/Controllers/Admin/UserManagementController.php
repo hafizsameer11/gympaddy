@@ -5,17 +5,19 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Services\MarketplaceListingService;
+use App\Services\TransactionService;
 use Illuminate\Http\Request;
 use App\Services\UserService;
 
 class UserManagementController extends Controller
 {
-    protected $userService, $marketplaceListingService;
+    protected $userService, $marketplaceListingService, $transactionService;
 
-    public function __construct(UserService $userService, MarketplaceListingService $marketplaceListingService)
+    public function __construct(UserService $userService, MarketplaceListingService $marketplaceListingService, TransactionService $transactionService)
     {
         $this->userService = $userService;
         $this->marketplaceListingService = $marketplaceListingService;
+        $this->transactionService = $transactionService;
     }
     public function index()
     {
@@ -72,5 +74,14 @@ class UserManagementController extends Controller
             ->get();
 
         return response()->json(['message' => 'User chats retrieved successfully', 'data' => $conVersations, 'status' => 'success']);
+    }
+    public function getUserTransactions($id)
+    {
+        try {
+            $transactions = $this->transactionService->getForUser($id);
+            return response()->json(['message' => 'User transactions retrieved successfully', 'data' => $transactions, 'status' => 'success']);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error retrieving user transactions', 'error' => $e->getMessage(), 'status' => 'error'], 500);
+        }
     }
 }

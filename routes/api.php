@@ -233,5 +233,6 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
         Route::get('social/{id}', [UserManagementController::class, 'socialData']);
         Route::get('marketPlace/{userId}', [UserManagementController::class, 'getmarketPlaceListingForUser']);
         Route::get('chat/{id}', [UserManagementController::class, 'getUserChats']);
+        Route::get('transactions/{id}', [UserManagementController::class, 'getUserTransactions']);
     });
 });
