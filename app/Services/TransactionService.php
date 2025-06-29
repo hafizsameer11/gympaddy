@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Transaction;
+use App\Models\User;
+use App\Models\Wallet;
 
 class TransactionService
 {
@@ -33,5 +35,19 @@ class TransactionService
     {
         $transaction->delete();
         return response()->json(['message' => 'Deleted']);
+    }
+    public function getForUser($userId)
+    {
+        $wallets = Wallet::where('user_id', $userId)->orderBy('created_at', 'desc')->first();
+        $transactions= Transaction::where('wallet_id', $wallets->id)->get();
+        $totalTopup = $transactions->where('type', 'topup')->sum('amount');
+        $totalWithdraw = $transactions->where('type', 'withdraw')->sum('amount');
+        $currentBalance=$wallets->balance ?? 0;
+        return [
+            'transactions' => $transactions,
+            'totalTopup' => $totalTopup,
+            'totalWithdraw' => $totalWithdraw,
+            'currentBalance' => $currentBalance,
+        ];
     }
 }

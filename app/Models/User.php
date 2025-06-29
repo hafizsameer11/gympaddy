@@ -72,12 +72,12 @@ class User extends Authenticatable
 
     public function giftsSent()
     {
-        return $this->hasMany(Gift::class, 'sender_id');
+        return $this->hasMany(Gift::class, 'from_user_id');
     }
 
     public function giftsReceived()
     {
-        return $this->hasMany(Gift::class, 'receiver_id');
+        return $this->hasMany(Gift::class, 'to_user_id');
     }
 
     public function profile()
@@ -90,7 +90,7 @@ class User extends Authenticatable
      */
     public function getProfilePictureUrlAttribute()
     {
-        return $this->profile_picture 
+        return $this->profile_picture
             ? asset('storage/' . $this->profile_picture)
             : null;
     }
@@ -101,6 +101,15 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\Notification::class);
     }
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class, 'related_user_id');
+    }
+    public function statuses()
+    {
+        return $this->hasMany(Status::class);
+    }
+
 
     // ...add other relationships as needed...
 }

@@ -14,6 +14,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\AdCampaignController;
 use App\Http\Controllers\AdInsightController;
+use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\MarketplaceListingController;
 use App\Http\Controllers\MarketplaceCategoryController;
 use App\Http\Controllers\LiveStreamController;
@@ -40,6 +41,7 @@ use Illuminate\Support\Facades\Artisan;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
 Route::get('/optimize-app', function () {
     Artisan::call('optimize:clear'); // Clears cache, config, route, and view caches
     Artisan::call('cache:clear');    // Clears application cache
@@ -234,8 +236,15 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
-   Route::group(['prefix' => 'user-management'], function () {
-       Route::get('/', [UserManagementController::class, 'index']);
-       Route::get('details/{id}', [UserManagementController::class, 'userDetails']);
-   });
+    Route::group(['prefix' => 'user-management'], function () {
+        Route::get('/', [UserManagementController::class, 'index']);
+        Route::get('details/{id}', [UserManagementController::class, 'userDetails']);
+        Route::get('social/{id}', [UserManagementController::class, 'socialData']);
+        Route::get('marketPlace/{userId}', [UserManagementController::class, 'getmarketPlaceListingForUser']);
+        Route::get('chat/{id}', [UserManagementController::class, 'getUserChats']);
+        Route::get('transactions/{id}', [UserManagementController::class, 'getUserTransactions']);
+    });
+    Route::group(['prefix' => 'transaction-management'], function () {
+        Route::get('/',[AdminTransactionController::class, 'index']);
+    });
 });
