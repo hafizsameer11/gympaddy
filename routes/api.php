@@ -14,6 +14,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\AdCampaignController;
 use App\Http\Controllers\AdInsightController;
+use App\Http\Controllers\Admin\BusinessController as AdminBusinessController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\MarketplaceListingController;
 use App\Http\Controllers\MarketplaceCategoryController;
@@ -245,6 +246,11 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
         Route::get('transactions/{id}', [UserManagementController::class, 'getUserTransactions']);
     });
     Route::group(['prefix' => 'transaction-management'], function () {
-        Route::get('/',[AdminTransactionController::class, 'index']);
+        Route::get('/', [AdminTransactionController::class, 'index']);
+    });
+    Route::group(['prefix' => 'business-management'], function () {
+        Route::get('/', [AdminBusinessController::class, 'index']);
+        //update status
+        Route::post('update-status/{id}', [AdminBusinessController::class, 'updateStatus']);
     });
 });
