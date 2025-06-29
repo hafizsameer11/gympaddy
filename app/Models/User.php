@@ -101,6 +101,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\Notification::class);
     }
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class,'related_user_id');
+    }
 
     // ...add other relationships as needed...
 }

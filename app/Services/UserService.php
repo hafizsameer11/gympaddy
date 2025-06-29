@@ -49,7 +49,6 @@ class UserService
   public function getUserById($id){
     return User::with(
         'wallet', 
-        'transactions', 
         'giftsReceived',
         'notifications', 
         'posts', 
