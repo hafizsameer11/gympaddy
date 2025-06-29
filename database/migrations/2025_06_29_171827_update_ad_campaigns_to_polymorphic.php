@@ -33,7 +33,7 @@ return new class extends Migration
             $table->date('start_date')->nullable()->after('duration');
             $table->date('end_date')->nullable()->after('start_date');
 
-            $table->enum('type', ['boost_post', 'boost_listing'])->default('boost_post')->after('end_date');
+            // $table->enum('type', ['boost_post', 'boost_listing'])->default('boost_post')->after('end_date');
         });
     }
 
