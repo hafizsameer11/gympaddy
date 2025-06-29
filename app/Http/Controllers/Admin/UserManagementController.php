@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Services\UserService;
+
+class UserManagementController extends Controller
+{
+    protected $userService;
+
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+    public function index()
+    {
+        try {
+            $data = [
+                'title' => 'User Management',
+                'count' => $this->userService->userCount(),
+                'users' => $this->userService->allUsers()
+            ];
+            return response()->json(['message' => 'User Management Data Retrieved Successfully', 'data' => $data]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'Error retrieving user management data', 'error' => $e->getMessage()], 500);
+        }
+    }
+}

@@ -8,6 +8,7 @@ use App\Http\Controllers\CommentController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\Admin\UserManagementController;
 use App\Http\Controllers\GiftController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\BusinessController;
@@ -32,7 +33,7 @@ use Illuminate\Support\Facades\Artisan;
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
-|
+|gity
 | Here is where you can register API routes for your application. These
 | routes are loaded by the RouteServiceProvider and all of them will
 | be assigned to the "api" middleware group. Make something great!
@@ -218,6 +219,8 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::delete('video-calls/{video_call}', [VideoCallController::class, 'destroy']);
 });
 
-Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
-   
+Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
+   Route::group(['prefix' => 'user-management'], function () {
+       Route::get('/', [UserManagementController::class, 'index']);
+   });
 });
