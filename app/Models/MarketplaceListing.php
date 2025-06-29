@@ -33,4 +33,9 @@ class MarketplaceListing extends Model
     {
         return $this->belongsTo(MarketplaceCategory::class, 'category_id');
     }
+    public function adCampaigns()
+{
+    return $this->morphMany(AdCampaign::class, 'adable');
+}
+
 }

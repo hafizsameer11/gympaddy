@@ -62,4 +62,9 @@ class Post extends Model
     {
         return $this->hasOne(AdCampaign::class, 'post_id');
     }
+    public function adCampaigns()
+{
+    return $this->morphMany(AdCampaign::class, 'adable');
+}
+
 }
