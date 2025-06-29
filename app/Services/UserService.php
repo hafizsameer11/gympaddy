@@ -72,8 +72,6 @@ public function getUserSocialData($id)
     $totalComments = Comment::where('user_id', $id)->count();
     $totalShares = Share::where('user_id', $id)->count();
     $totalLikes = Like::where('user_id', $id)->count();
-
-    // Get all posts by this user with relationships
     $posts = Post::where('user_id', $id)
         ->withCount(['likes', 'shares'])
         ->with([

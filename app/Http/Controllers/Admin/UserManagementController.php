@@ -41,6 +41,12 @@ class UserManagementController extends Controller
     }
     public function socialData($id)
     {
+        try{
+            $data=$this->userService->getUserSocialData($id);
+            return response()->json(['message' => 'Social data retrieved successfully', 'data' => $data,'status' => 'success']);
+        }catch (\Exception $e) {
+            return response()->json(['message' => 'Error retrieving social data', 'error' => $e->getMessage(),'status' => 'error'], 500);
+        }
 
     }
     public function marketPlaceData($id){
@@ -50,6 +56,6 @@ class UserManagementController extends Controller
 
     }
     public function deleteUser($id){
-        
+
     }
 }
