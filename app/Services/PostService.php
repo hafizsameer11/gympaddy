@@ -11,11 +11,11 @@ use FFMpeg\Format\Video\X264;
 
 class PostService
 {
-    public function index($user)
+    public function index()
     {
         return Post::with(['user', 'comments', 'likes', 'media'])
             ->withCount('allComments')
-            ->where('user_id', $user->id)
+            ->latest() // optional: newest posts first
             ->paginate(20);
     }
 
@@ -68,15 +68,15 @@ class PostService
     private function handleMediaUploads(Post $post, array $mediaFiles)
     {
         $order = 0;
-        
+
         foreach ($mediaFiles as $file) {
             $mediaType = str_starts_with($file->getMimeType(), 'image/') ? 'image' : 'video';
             $fileName = time() . '_' . $order . '_' . $file->getClientOriginalName();
             $filePath = "posts/{$post->id}/{$fileName}";
-            
+
             // Create directory if it doesn't exist
             Storage::disk('public')->makeDirectory("posts/{$post->id}");
-            
+
             if ($mediaType === 'image') {
                 // Store image as-is
                 $storedPath = $file->storeAs("posts/{$post->id}", $fileName, 'public');
@@ -87,11 +87,11 @@ class PostService
                 $tempPath = $file->storeAs('temp', $fileName, 'public');
                 $finalPath = $this->compressVideo($tempPath, $filePath);
                 $fileSize = Storage::disk('public')->size($finalPath);
-                
+
                 // Clean up temp file
                 Storage::disk('public')->delete($tempPath);
             }
-            
+
             // Create PostMedia record
             PostMedia::create([
                 'post_id' => $post->id,
@@ -102,7 +102,7 @@ class PostService
                 'file_size' => $fileSize,
                 'order' => $order,
             ]);
-            
+
             $order++;
         }
     }
@@ -111,10 +111,10 @@ class PostService
     {
         try {
             $ffmpeg = FFMpeg::create([
-                'ffmpeg.binaries'  => config('media.ffmpeg_path', '/usr/bin/ffmpeg'),
+                'ffmpeg.binaries' => config('media.ffmpeg_path', '/usr/bin/ffmpeg'),
                 'ffprobe.binaries' => config('media.ffprobe_path', '/usr/bin/ffprobe'),
-                'timeout'          => 3600,
-                'ffmpeg.threads'   => 12,
+                'timeout' => 3600,
+                'ffmpeg.threads' => 12,
             ]);
 
             $inputFullPath = Storage::disk('public')->path($inputPath);
@@ -127,16 +127,16 @@ class PostService
             }
 
             $video = $ffmpeg->open($inputFullPath);
-            
+
             // Configure compression settings
             $format = new X264();
             $format->setKiloBitrate(1000) // 1000 kbps
-                   ->setAudioChannels(2)
-                   ->setAudioKiloBitrate(128);
+                ->setAudioChannels(2)
+                ->setAudioKiloBitrate(128);
 
             // Resize video if needed (max 720p)
             $video->filters()
-                  ->resize(new \FFMpeg\Coordinate\Dimension(1280, 720), \FFMpeg\Filters\Video\ResizeFilter::RESIZEMODE_INSET);
+                ->resize(new \FFMpeg\Coordinate\Dimension(1280, 720), \FFMpeg\Filters\Video\ResizeFilter::RESIZEMODE_INSET);
 
             $video->save($format, $outputFullPath);
 
@@ -152,7 +152,7 @@ class PostService
                 'output' => $outputPath,
                 'error' => $e->getMessage()
             ]);
-            
+
             // Fallback: copy original file
             Storage::disk('public')->copy($inputPath, $outputPath);
             return $outputPath;
