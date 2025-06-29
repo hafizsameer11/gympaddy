@@ -72,12 +72,12 @@ class User extends Authenticatable
 
     public function giftsSent()
     {
-        return $this->hasMany(Gift::class, 'sender_id');
+        return $this->hasMany(Gift::class, 'from_user_id');
     }
 
     public function giftsReceived()
     {
-        return $this->hasMany(Gift::class, 'receiver_id');
+        return $this->hasMany(Gift::class, 'to_user_id');
     }
 
     public function profile()
