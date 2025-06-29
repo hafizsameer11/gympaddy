@@ -40,6 +40,7 @@ use Illuminate\Support\Facades\Artisan;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
 Route::get('/optimize-app', function () {
     Artisan::call('optimize:clear'); // Clears cache, config, route, and view caches
     Artisan::call('cache:clear');    // Clears application cache
@@ -226,11 +227,11 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 });
 
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
-   Route::group(['prefix' => 'user-management'], function () {
-       Route::get('/', [UserManagementController::class, 'index']);
-       Route::get('details/{id}', [UserManagementController::class, 'userDetails']);
-       Route::get('social/{id}', [UserManagementController::class, 'socialData']);
-       Route::get('marketPlace/{userId}', [UserManagementController::class, 'getmarketPlaceListingForUser']);
-       Route::get('chat/{id}', [UserManagementController::class, 'getUserChats']);
-   });
+    Route::group(['prefix' => 'user-management'], function () {
+        Route::get('/', [UserManagementController::class, 'index']);
+        Route::get('details/{id}', [UserManagementController::class, 'userDetails']);
+        Route::get('social/{id}', [UserManagementController::class, 'socialData']);
+        Route::get('marketPlace/{userId}', [UserManagementController::class, 'getmarketPlaceListingForUser']);
+        Route::get('chat/{id}', [UserManagementController::class, 'getUserChats']);
+    });
 });

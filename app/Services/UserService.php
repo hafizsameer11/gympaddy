@@ -8,7 +8,9 @@ use App\Models\Comment;
 use App\Models\Transaction;
 use App\Models\Gift;
 use App\Models\Like;
+use App\Models\LiveStream;
 use App\Models\Share;
+use App\Models\Status;
 use App\Models\UserProfile;
 class UserService
 {
@@ -54,11 +56,11 @@ class UserService
     }
   public function getUserById($id){
     return User::with(
-        'wallet', 
-        'transactions', 
+        'wallet',
+        'transactions',
         'giftsReceived',
-        'notifications', 
-        'posts', 
+        'notifications',
+        'posts',
         'comments',
         'giftsSent',
         'profile',
@@ -112,13 +114,17 @@ public function getUserSocialData($id)
             })
         ];
     });
-
+    $liveStreams=LiveStream::where('user_id', $id)
+        ->orderBy('created_at', 'desc')->get();
+        $status=Status::where('user_id', $id)
+        ->orderBy('created_at', 'desc')->get();
     return [
         'total_posts' => $totalPosts,
         'total_comments' => $totalComments,
         'total_shares_by_user' => $totalShares,
         'total_likes_by_user' => $totalLikes,
-        'posts' => $postData
+        'posts' => $postData,
+        'liveStreams'=>$liveStreams,'status'=>$status
     ];
 }
 
