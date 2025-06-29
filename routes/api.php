@@ -14,6 +14,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\BusinessController;
 use App\Http\Controllers\AdCampaignController;
 use App\Http\Controllers\AdInsightController;
+use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\MarketplaceListingController;
 use App\Http\Controllers\MarketplaceCategoryController;
 use App\Http\Controllers\LiveStreamController;
@@ -234,5 +235,8 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
         Route::get('marketPlace/{userId}', [UserManagementController::class, 'getmarketPlaceListingForUser']);
         Route::get('chat/{id}', [UserManagementController::class, 'getUserChats']);
         Route::get('transactions/{id}', [UserManagementController::class, 'getUserTransactions']);
+    });
+    Route::group(['prefix' => 'transaction-management'], function () {
+        Route::get('/',[AdminTransactionController::class, 'index']);
     });
 });
