@@ -13,8 +13,9 @@ class VideoCall extends Model
         'caller_id',
         'receiver_id',
         'channel_name',
-        'status', // started, ended, missed
-        // ...other fields...
+        'type',
+        'status',
+        'ended_at',
     ];
 
     public function caller()
