@@ -222,5 +222,6 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
    Route::group(['prefix' => 'user-management'], function () {
        Route::get('/', [UserManagementController::class, 'index']);
+       Route::get('details/{id}', [UserManagementController::class, 'userDetails']);
    });
 });

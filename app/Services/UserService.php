@@ -46,4 +46,18 @@ class UserService
     public function allUsers(){
         return User::where('role','user')->orderBy('created_at','desc')->get();
     }
+  public function getUserById($id){
+    return User::with(
+        'wallet', 
+        'transactions', 
+        'giftsReceived',
+        'notifications', 
+        'posts', 
+        'comments',
+        'giftsSent',
+        'profile',
+        'wallets'
+    )->findOrFail($id);
+}
+
 }

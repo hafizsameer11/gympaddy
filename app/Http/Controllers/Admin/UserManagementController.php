@@ -27,4 +27,16 @@ class UserManagementController extends Controller
             return response()->json(['message' => 'Error retrieving user management data', 'error' => $e->getMessage()], 500);
         }
     }
+    public function userDetails($id){
+    try {
+        $user = $this->userService->getUserById($id);
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+        return response()->json(['message' => 'User details retrieved successfully', 'data' => $user]);
+    }
+    catch (\Exception $e) {
+        return response()->json(['message' => 'Error retrieving user details', 'error' => $e->getMessage()], 500);
+    }
+    }
 }
