@@ -55,4 +55,10 @@ class LikeController extends Controller
     {
         return $this->likeService->destroy($like);
     }
+    public function likePost($postId)
+    {
+        $user = auth()->user();
+        $payload = ['likeable_id ' => $postId, 'user_id' => $user->id];
+        return $this->likeService->likePost($payload);
+    }
 }

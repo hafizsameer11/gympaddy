@@ -38,7 +38,29 @@ class LikeService
         $like = Like::create($data);
         return response()->json($like, 201);
     }
+    public function likePost($payload)
+    {
+        $user = auth()->user();
+        $payload['user_id'] = $user->id;
 
+        // Check if the user has already liked this post
+        $alreadyLiked = Like::where([
+            'user_id' => $payload['user_id'],
+            'likeable_id' => $payload['likeable_id'],
+        ])->exists();
+
+        if ($alreadyLiked) {
+            //disliek it
+            Like::where([
+                'user_id' => $payload['user_id'],
+                'likeable_id' => $payload['likeable_id'],
+            ])->delete();
+            return response()->json(['message' => 'Disliked'], 200);
+        }
+
+        $like = Like::create($payload);
+        return response()->json($like, 201);
+    }
     public function show(Like $like)
     {
         return $like;

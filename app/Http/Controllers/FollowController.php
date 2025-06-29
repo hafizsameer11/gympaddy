@@ -67,8 +67,15 @@ class FollowController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($id)
+    public function destroy($userId)
     {
-        return $this->followService->destroy($id);
+        return $this->followService->destroy($userId);
+    }
+    public function getFollowers($userId)
+    {
+        return $this->followService->getFollowers($userId);
+    }
+    public function getFollowing($userId){
+        return $this->followService->getFollowing($userId);
     }
 }

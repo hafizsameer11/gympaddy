@@ -39,15 +39,21 @@ class FollowService
         return response()->json($follow);
     }
 
-    public function destroy($id)
+    public function destroy($userId)
     {
-        //get the follow relationship by id
-        $follow = Follow::findOrFail($id);
+
+        $follow = Follow::where('follower_id', auth()->id())
+            ->where('followed_id', $userId)
+            ->first();
         $follow->delete();
         return response()->json(['message' => 'Deleted', 'status' => 'success'], 200);
     }
     public function getFollowers($userId)
     {
         return Follow::where('followed_id', $userId)->with('follower')->get();
+    }
+    public function getFollowing($userId)
+    {
+        return Follow::where('follower_id', $userId)->with('followed')->get();
     }
 }
