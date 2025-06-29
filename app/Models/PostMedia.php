@@ -9,6 +9,7 @@ class PostMedia extends Model
 {
     use HasFactory;
 
+    // Fields that can be mass-assigned
     protected $fillable = [
         'post_id',
         'file_path',
@@ -19,15 +20,18 @@ class PostMedia extends Model
         'order',
     ];
 
+    // Add computed 'url' field to every response
+    protected $appends = ['url'];
+
+    // Define relationship to Post
     public function post()
     {
         return $this->belongsTo(Post::class);
     }
 
+    // Accessor: returns full public URL for the media file
     public function getUrlAttribute()
     {
         return asset('storage/' . $this->file_path);
     }
-
-    protected $appends = ['url'];
 }

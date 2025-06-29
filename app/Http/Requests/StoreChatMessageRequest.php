@@ -16,9 +16,9 @@ class StoreChatMessageRequest extends FormRequest
     public function rules()
     {
         return [
-            'sender_id' => 'required|integer|exists:users,id',
-            'receiver_id' => 'required|integer|exists:users,id',
+            'receiver_id' => 'required_without:listing_id|integer|exists:users,id',
             'message' => 'required|string',
+            'listing_id' => 'nullable|integer|exists:marketplace_listings,id',
         ];
     }
 

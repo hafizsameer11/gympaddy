@@ -11,12 +11,14 @@ class AdCampaign extends Model
 
     protected $fillable = [
         'user_id',
+        'post_id',
         'name',
         'title',
         'content',
         'media_url',
         'budget',
         'status',
+        'type',
         // ...other fields...
     ];
 
@@ -25,8 +27,18 @@ class AdCampaign extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function post()
+    {
+        return $this->belongsTo(Post::class, 'post_id');
+    }
+
     public function insights()
     {
         return $this->hasMany(AdInsight::class);
+    }
+
+    public function isBoosted()
+    {
+        return $this->type === 'boosted';
     }
 }

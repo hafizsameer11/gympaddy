@@ -10,6 +10,7 @@ class ChatMessage extends Model
     use HasFactory;
 
     protected $fillable = [
+        'conversation_id',
         'sender_id',
         'receiver_id',
         'message',
@@ -24,5 +25,10 @@ class ChatMessage extends Model
     public function receiver()
     {
         return $this->belongsTo(User::class, 'receiver_id');
+    }
+
+    public function conversation()
+    {
+        return $this->belongsTo(Conversation::class);
     }
 }

@@ -6,6 +6,8 @@ use App\Models\ChatMessage;
 use App\Http\Requests\StoreChatMessageRequest;
 use App\Http\Requests\UpdateChatMessageRequest;
 use App\Services\ChatMessageService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ChatMessageController extends Controller
 {
@@ -19,10 +21,22 @@ class ChatMessageController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
-    {
-        return $this->chatMessageService->index();
+  public function index(Request $request)
+{
+    // Optionally filter by receiver_id for 1-on-1 chat
+    $params = [];
+
+    if ($request->has('receiver_id')) {
+        $params['receiver_id'] = $request->query('receiver_id');
     }
+
+    if ($request->has('conversation_id')) {
+        $params['conversation_id'] = $request->query('conversation_id');
+    }
+
+    return $this->chatMessageService->index($params);
+}
+
 
     /**
      * Show the form for creating a new resource.
@@ -37,7 +51,9 @@ class ChatMessageController extends Controller
      */
     public function store(StoreChatMessageRequest $request)
     {
-        return $this->chatMessageService->store($request->validated());
+        $data = $request->validated();
+        $data['sender_id'] = Auth::id();
+        return $this->chatMessageService->store($data);
     }
 
     /**
@@ -71,5 +87,12 @@ class ChatMessageController extends Controller
     {
         return $this->chatMessageService->destroy($chatMessage);
     }
+
+    /**
+     * Display a listing of conversations.
+     */
+    public function conversations()
+    {
+        return $this->chatMessageService->listConversations();
+    }
 }
-   
