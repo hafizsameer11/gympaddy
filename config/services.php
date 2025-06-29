@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
     |--------------------------------------------------------------------------
     | Third Party Services
@@ -31,4 +30,8 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'agora' => [
+        'app_id' => env('AGORA_APP_ID', '2fae578d9eef4fe19df335eb67227571'),
+        'certificate' => env('AGORA_APP_CERTIFICATE'),
+    ],
 ];

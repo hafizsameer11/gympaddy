@@ -225,6 +225,14 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('boost-post/{post}', [BoostController::class, 'boost']);
 });
 
+// Agora video/voice call endpoints
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('video-call/token', [\App\Http\Controllers\VideoCallController::class, 'generateToken']);
+    Route::post('video-call/start', [\App\Http\Controllers\VideoCallController::class, 'startCall']);
+    Route::post('video-call/end', [\App\Http\Controllers\VideoCallController::class, 'endCall']);
+    Route::get('video-call/history', [\App\Http\Controllers\VideoCallController::class, 'getCallHistory']);
+});
+
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
    Route::group(['prefix' => 'user-management'], function () {
        Route::get('/', [UserManagementController::class, 'index']);
