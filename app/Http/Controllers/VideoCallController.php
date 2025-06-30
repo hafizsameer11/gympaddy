@@ -176,7 +176,7 @@ class VideoCallController extends Controller
     {
         try {
             $channel = $request->query('channel');
-            $uid = intval($request->query('uid'));
+         $uid = (int) $request->input('uid'); // 👈 force integer
 
             // ✅ Validate input
             if (!$channel || $uid <= 0) {
