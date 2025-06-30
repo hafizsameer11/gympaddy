@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\RtcTokenBuilder;
 use App\Models\VideoCall;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Services\AgoraService;
+use Illuminate\Support\Facades\Log;
 
 class VideoCallController extends Controller
 {
@@ -170,5 +172,46 @@ class VideoCallController extends Controller
 
         return response()->json(['token' => $token]);
     }
+public function getToken(Request $request)
+{
+    try {
+        $channel = $request->query('channel');
+        $uid = intval($request->query('uid'));
 
+        // ✅ Validate input
+        if (!$channel || $uid <= 0) {
+            return response()->json(['error' => 'Missing or invalid channel or uid'], 400);
+        }
+
+        // ✅ Load config safely
+        $appId = config('services.agora.app_id', env('AGORA_APP_ID'));
+        $appCertificate = config('services.agora.app_certificate', env('AGORA_APP_CERTIFICATE'));
+
+        if (!$appId || !$appCertificate) {
+            return response()->json(['error' => 'Agora credentials are missing'], 500);
+        }
+
+        // ✅ Set token expiry (1 hour)
+        $expireTimeInSeconds = 3600;
+        $privilegeExpiredTs = time() + $expireTimeInSeconds;
+
+        // ✅ Generate token
+        $token = RtcTokenBuilder::buildTokenWithUid(
+            $appId,
+            $appCertificate,
+            $channel,
+            $uid,
+            RtcTokenBuilder::RolePublisher, // Future: allow switching roles
+            $privilegeExpiredTs
+        );
+
+        return response()->json(['token' => $token]);
+    } catch (\Exception $e) {
+        Log::error('Agora token generation failed', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+        return response()->json(['error' => 'Failed to generate token'], 500);
+    }
+}
 }
