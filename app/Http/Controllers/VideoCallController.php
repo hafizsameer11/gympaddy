@@ -206,7 +206,7 @@ class VideoCallController extends Controller
             );
             Log::info('Agora token generated', [
                 'channel' => $request->channel,
-                'uid' => $request->uid,
+                'uid' => $uid,
                 'token' => $token,
             ]);
 
