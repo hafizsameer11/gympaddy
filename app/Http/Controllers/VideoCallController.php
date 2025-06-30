@@ -184,8 +184,8 @@ public function getToken(Request $request)
         }
 
         // ✅ Load config safely
-        $appId = config('services.agora.app_id', env('AGORA_APP_ID'));
-        $appCertificate = config('services.agora.app_certificate', env('AGORA_APP_CERTIFICATE'));
+        $appId = '2fae578d9eef4fe19df335eb67227571';
+        $appCertificate = '118e704beaea42e38b74b21a08bded63';
 
         if (!$appId || !$appCertificate) {
             return response()->json(['error' => 'Agora credentials are missing'], 500);
