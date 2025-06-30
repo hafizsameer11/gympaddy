@@ -12,7 +12,7 @@ class CallController extends Controller
         $data = $request->validate([
             'receiver_id' => 'required|integer',
             'channel_name' => 'required|string',
-            'type' => 'required|in:voice,video',
+            'type' => 'required',
         ]);
 
         $data['caller_id'] = auth()->id();
