@@ -151,6 +151,8 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::put('marketplace-listings/{marketplace_listing}', [MarketplaceListingController::class, 'update']);
     Route::delete('marketplace-listings/{marketplace_listing}', [MarketplaceListingController::class, 'destroy']);
     Route::get('marketplace-listings/latest', [MarketplaceListingController::class, 'latest']);
+    Route::get('marketplace-listings/user/{user_id}', [MarketplaceListingController::class, 'userListings']);
+
 
     // Marketplace Categories
     Route::get('marketplace-categories', [MarketplaceCategoryController::class, 'index']);
