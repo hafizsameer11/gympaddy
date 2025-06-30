@@ -152,4 +152,23 @@ class VideoCallController extends Controller
             ->get();
         return response()->json($calls);
     }
+
+    public function generateLiveToken(Request $request, AgoraService $agoraService)
+    {
+        $request->validate([
+            'channel_name' => 'required|string|max:255',
+            'uid' => 'required|integer|min:1',
+            'role' => 'required|in:host,audience', // 'host' = broadcaster, 'audience' = viewer
+        ]);
+
+        $token = $agoraService->generateRtcTokenWithRole(
+            $request->input('channel_name'),
+            $request->input('uid'),
+            $request->input('role'),
+            30 * 60 // 30 minutes
+        );
+
+        return response()->json(['token' => $token]);
+    }
+
 }

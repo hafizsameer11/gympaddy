@@ -19,11 +19,11 @@ class PostController extends Controller
         $this->postService = $postService;
     }
 
-    public function index()
-    {
-        $user = Auth::user();
-        return $this->postService->index($user);
-    }
+  public function index()
+{
+    return $this->postService->index();
+}
+
 
     public function store(StorePostRequest $request)
     {

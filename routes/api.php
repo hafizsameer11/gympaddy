@@ -92,6 +92,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/end-call', [CallController::class, 'endCall']);
     
     Route::get('profile', [UserController::class, 'profile']);
+    Route::get('userDetails/{userId}', [UserController::class, 'userDetails']); // <-- add this
     Route::post('edit-profile', [UserController::class, 'editProfile']);
     Route::post('device-token', [UserController::class, 'updateDeviceToken']); // <-- add this
 
@@ -156,6 +157,8 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::put('marketplace-listings/{marketplace_listing}', [MarketplaceListingController::class, 'update']);
     Route::delete('marketplace-listings/{marketplace_listing}', [MarketplaceListingController::class, 'destroy']);
     Route::get('marketplace-listings/latest', [MarketplaceListingController::class, 'latest']);
+    Route::get('marketplace-listings/user/{user_id}', [MarketplaceListingController::class, 'userListings']);
+
 
     // Marketplace Categories
     Route::get('marketplace-categories', [MarketplaceCategoryController::class, 'index']);
@@ -184,7 +187,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::get('likes/{like}', [LikeController::class, 'show']);
     Route::put('likes/{like}', [LikeController::class, 'update']);
     Route::delete('likes/{like}', [LikeController::class, 'destroy']);
-
+    Route::get('like/post/{postId}', [LikeController::class, 'likePost']); // <-- add this
     // Shares
     Route::get('shares', [ShareController::class, 'index']);
     Route::post('shares', [ShareController::class, 'store']);
@@ -197,8 +200,9 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('follows', [FollowController::class, 'store']);
     Route::get('follows/{follow}', [FollowController::class, 'show']);
     Route::put('follows/{follow}', [FollowController::class, 'update']);
-    Route::delete('follows/{follow}', [FollowController::class, 'destroy']);
-
+    Route::get('unfollow/{userId}', [FollowController::class, 'destroy']);
+    Route::get('followers/{userId}', [FollowController::class, 'getFollowers']); // <-- add this
+    Route::get('following/{userId}', [FollowController::class, 'getFollowing']); // <-- add this
     // Notifications
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::post('notifications', [NotificationController::class, 'store']);
@@ -231,7 +235,8 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::delete('video-calls/{video_call}', [VideoCallController::class, 'destroy']);
 
     // Boost Posts
-    Route::post('boost-post/{postId}', [BoostController::class, 'boost']);
+    Route::post('boost-post/{postId}', [BoostController::class, 'boostPost']);
+    Route::post('boost-listing/{listingId}', [BoostController::class, 'boostMarketplaceListing']);
 });
 
 // Agora video/voice call endpoints
@@ -240,6 +245,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('video-call/start', [\App\Http\Controllers\VideoCallController::class, 'startCall']);
     Route::post('video-call/end', [\App\Http\Controllers\VideoCallController::class, 'endCall']);
     Route::get('video-call/history', [\App\Http\Controllers\VideoCallController::class, 'getCallHistory']);
+    Route::post('video-call/live-token', [\App\Http\Controllers\VideoCallController::class, 'generateLiveToken']);
+
 });
 
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {

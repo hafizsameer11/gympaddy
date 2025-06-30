@@ -31,7 +31,7 @@ return [
     ],
 
     'agora' => [
-        'app_id' => env('AGORA_APP_ID', '2fae578d9eef4fe19df335eb67227571'),
-        'certificate' => env('AGORA_APP_CERTIFICATE'),
+        'app_id' => env('2fae578d9eef4fe19df335eb67227571', '2fae578d9eef4fe19df335eb67227571'),
+        'certificate' => env('118e704beaea42e38b74b21a08bded63'),
     ],
 ];

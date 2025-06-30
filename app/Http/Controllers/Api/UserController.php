@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Follow;
+use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -58,7 +60,7 @@ class UserController extends Controller
             $file = $request->file('profile_picture');
             $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
             $path = $file->storeAs('profile_pictures', $filename, 'public');
-            
+
             $validated['profile_picture'] = $path;
         }
 
@@ -81,10 +83,19 @@ class UserController extends Controller
     public function profile()
     {
         $user = Auth::user();
-        
+        //send followers count, following count, total post count and all posts
+        $followersCount = Follow::where('followed_id', $user->id)->count();
+        $followingCount = Follow::where('follower_id', $user->id)->count();
+        $postCount = Post::where('user_id', $user->id)->count();
+        $posts = Post::where('user_id', $user->id)->with(['likes', 'comments', 'media'])->get();
+
         return response()->json([
             'status' => 'success',
-            'user' => $user
+            'user' => $user,
+            'followers_count' => $followersCount,
+            'following_count' => $followingCount,
+            'post_count' => $postCount,
+            'posts' => $posts
         ]);
     }
 
@@ -101,5 +112,22 @@ class UserController extends Controller
         $user->save();
 
         return response()->json(['message' => 'Device token updated']);
+    }
+    public function userDetails($userId)
+    {
+        $user = \App\Models\User::findOrFail($userId);
+        //get follower count its list total post count and all posts
+        $followersCount = Follow::where('followed_id', $userId)->count();
+        $followingCount = Follow::where('follower_id', $userId)->count();
+        $postCount = Post::where('user_id', $userId)->count();
+        $posts = Post::where('user_id', $userId)->with(['likes', 'comments', 'media'])->get();
+        return response()->json([
+            'status' => 'success',
+            'user' => $user,
+            'followers_count' => $followersCount,
+            'following_count' => $followingCount,
+            'post_count' => $postCount,
+            'posts' => $posts
+        ]);
     }
 }
