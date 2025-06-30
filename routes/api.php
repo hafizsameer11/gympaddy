@@ -28,6 +28,7 @@ use App\Http\Controllers\ChatMessageController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\VideoCallController;
 use App\Http\Controllers\BoostController;
+use App\Http\Controllers\CallController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
@@ -85,6 +86,11 @@ Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
 
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     // User Profile
+
+     Route::post('/start-call', [CallController::class, 'startCall']);
+    Route::get('/incoming-call', [CallController::class, 'checkIncomingCall']);
+    Route::post('/end-call', [CallController::class, 'endCall']);
+    
     Route::get('profile', [UserController::class, 'profile']);
     Route::post('edit-profile', [UserController::class, 'editProfile']);
     Route::post('device-token', [UserController::class, 'updateDeviceToken']); // <-- add this
