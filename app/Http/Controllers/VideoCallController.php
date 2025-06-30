@@ -172,46 +172,52 @@ class VideoCallController extends Controller
 
         return response()->json(['token' => $token]);
     }
-public function getToken(Request $request)
-{
-    try {
-        $channel = $request->query('channel');
-        $uid = intval($request->query('uid'));
+    public function getToken(Request $request)
+    {
+        try {
+            $channel = $request->query('channel');
+            $uid = intval($request->query('uid'));
 
-        // ✅ Validate input
-        if (!$channel || $uid <= 0) {
-            return response()->json(['error' => 'Missing or invalid channel or uid'], 400);
+            // ✅ Validate input
+            if (!$channel || $uid <= 0) {
+                return response()->json(['error' => 'Missing or invalid channel or uid'], 400);
+            }
+
+            // ✅ Load config safely
+            $appId = '2fae578d9eef4fe19df335eb67227571';
+            $appCertificate = '118e704beaea42e38b74b21a08bded63';
+
+            if (!$appId || !$appCertificate) {
+                return response()->json(['error' => 'Agora credentials are missing'], 500);
+            }
+
+            // ✅ Set token expiry (1 hour)
+            $expireTimeInSeconds = 3600;
+            $privilegeExpiredTs = time() + $expireTimeInSeconds;
+
+            // ✅ Generate token
+            $token = RtcTokenBuilder::buildTokenWithUid(
+                $appId,
+                $appCertificate,
+                $channel,
+                $uid,
+                RtcTokenBuilder::RolePublisher, // Future: allow switching roles
+                privilegeExpiredTs: $privilegeExpiredTs
+            );
+            Log::info('Agora token generated', [
+                'channel' => $request->channel,
+                'uid' => $request->uid,
+                'token' => $token,
+            ]);
+
+
+            return response()->json(['token' => $token]);
+        } catch (\Exception $e) {
+            Log::error('Agora token generation failed', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['error' => 'Failed to generate token'], 500);
         }
-
-        // ✅ Load config safely
-        $appId = '2fae578d9eef4fe19df335eb67227571';
-        $appCertificate = '118e704beaea42e38b74b21a08bded63';
-
-        if (!$appId || !$appCertificate) {
-            return response()->json(['error' => 'Agora credentials are missing'], 500);
-        }
-
-        // ✅ Set token expiry (1 hour)
-        $expireTimeInSeconds = 3600;
-        $privilegeExpiredTs = time() + $expireTimeInSeconds;
-
-        // ✅ Generate token
-        $token = RtcTokenBuilder::buildTokenWithUid(
-            $appId,
-            $appCertificate,
-            $channel,
-            $uid,
-            RtcTokenBuilder::RolePublisher, // Future: allow switching roles
-            $privilegeExpiredTs
-        );
-
-        return response()->json(['token' => $token]);
-    } catch (\Exception $e) {
-        Log::error('Agora token generation failed', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
-        ]);
-        return response()->json(['error' => 'Failed to generate token'], 500);
     }
-}
 }
