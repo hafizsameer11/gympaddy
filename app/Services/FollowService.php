@@ -41,12 +41,21 @@ class FollowService
 
     public function destroy($userId)
     {
-
         $follow = Follow::where('follower_id', auth()->id())
             ->where('followed_id', $userId)
             ->first();
-        $follow->delete();
-        return response()->json(['message' => 'Deleted', 'status' => 'success'], 200);
+
+        if ($follow) {
+            $follow->delete();
+            return response()->json(['message' => 'Unfollowed', 'status' => 'success'], 200);
+        } else {
+            // Not following, so follow
+            $newFollow = Follow::create([
+                'follower_id' => auth()->id(),
+                'followed_id' => $userId,
+            ]);
+            return response()->json(['message' => 'Followed', 'status' => 'success', 'data' => $newFollow], 201);
+        }
     }
     public function getFollowers($userId)
     {
