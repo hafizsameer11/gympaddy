@@ -9,16 +9,29 @@ class CallController extends Controller
 {
     public function startCall(Request $request)
     {
-        $data = $request->validate([
-            'receiver_id' => 'required|integer',
-            'channel_name' => 'required|string',
-            'type' => 'required',
-        ]);
+         $data = $request->validate([
+        'receiver_id' => 'required|integer',
+        'channel_name' => 'required|string',
+        'type' => 'required|string',
+    ]);
 
-        $data['caller_id'] = auth()->id();
-        $call = Call::create($data);
+    $callerUid = rand(100000, 999999);
+    $receiverUid = rand(100000, 999999);
 
-        return response()->json($call);
+    $call = Call::create([
+        'caller_id'    => auth()->id(),
+        'receiver_id'  => $data['receiver_id'],
+        'channel_name' => $data['channel_name'],
+        'type'         => $data['type'],
+        'status'       => 'Initiated', // default status
+        'caller_uid'   => $callerUid,
+        'receiver_uid' => $receiverUid,
+    ]);
+
+    return response()->json([
+        'message' => 'Call started successfully',
+        'call'    => $call,
+    ]);
     }
 
     public function checkIncomingCall(Request $request)

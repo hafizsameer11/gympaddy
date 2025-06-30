@@ -14,6 +14,8 @@ class Call extends Model
         'channel_name',
         'call_type',
         'status',
+        'caller_uid', // Added for unique caller identification
+        'receiver_uid', // Added for unique receiver identification
     ];
 
     public function caller()
