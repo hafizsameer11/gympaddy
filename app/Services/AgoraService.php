@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\RtcTokenBuilder as HelpersRtcTokenBuilder;
 use TaylanUnutmaz\AgoraTokenBuilder\RtcTokenBuilder;
 
 class AgoraService
@@ -13,7 +14,7 @@ class AgoraService
     {
         $expireTime = time() + $expireSeconds;
 
-        return RtcTokenBuilder::buildTokenWithUid(
+        return HelpersRtcTokenBuilder::buildTokenWithUid(
             $this->appId,
             $this->appCertificate,
             $channelName,
