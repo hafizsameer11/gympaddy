@@ -59,10 +59,30 @@ class FollowService
         }
         return response()->json(['message' => 'Deleted', 'status' => 'success'], 200);
     }
-    public function getFollowers($userId)
-    {
-        return Follow::where('followed_id', $userId)->with('follower')->get();
-    }
+   public function getFollowersWithFollowBack($userId)
+{
+    $followers = Follow::where('followed_id', $userId)
+        ->with('follower')
+        ->get();
+
+    // Get IDs of all followers
+    $followerIds = $followers->pluck('follower.id')->toArray();
+
+    // Get who $userId is following (to check for follow-back)
+    $followBacks = Follow::where('follower_id', $userId)
+        ->whereIn('followed_id', $followerIds)
+        ->pluck('followed_id')
+        ->toArray();
+
+    // Map results with `is_following_back`
+    $followers = $followers->map(function ($item) use ($followBacks) {
+        $item->follower->is_following_back = in_array($item->follower->id, $followBacks);
+        return $item;
+    });
+
+    return $followers;
+}
+
     public function getFollowing($userId)
     {
         return Follow::where('follower_id', $userId)->with('followed')->get();
