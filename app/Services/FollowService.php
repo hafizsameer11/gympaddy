@@ -53,8 +53,10 @@ class FollowService
                 'followed_id' => $userId,
             ]);
             // return response()->json(['message' => 'You are not following this user'], 404);
+        }else{
+
+            $follow->delete() ;
         }
-        $follow->delete();
         return response()->json(['message' => 'Deleted', 'status' => 'success'], 200);
     }
     public function getFollowers($userId)
