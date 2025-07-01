@@ -73,7 +73,7 @@ class FollowController extends Controller
     }
     public function getFollowers($userId)
     {
-        return $this->followService->getFollowers($userId);
+        return $this->followService->getFollowersWithFollowBack($userId);
     }
     public function getFollowing($userId){
         return $this->followService->getFollowing($userId);
