@@ -200,7 +200,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('follows', [FollowController::class, 'store']);
     Route::get('follows/{follow}', [FollowController::class, 'show']);
     Route::put('follows/{follow}', [FollowController::class, 'update']);
-    Route::get('unfollow/{userId}', [FollowController::class, 'destroy']);
+    Route::get('follow-unfollow/{userId}', [FollowController::class, 'destroy']);
     Route::get('followers/{userId}', [FollowController::class, 'getFollowers']); // <-- add this
     Route::get('following/{userId}', [FollowController::class, 'getFollowing']); // <-- add this
     // Notifications

@@ -45,6 +45,15 @@ class FollowService
         $follow = Follow::where('follower_id', auth()->id())
             ->where('followed_id', $userId)
             ->first();
+            //check if follow relationship exists dekete otherwise create a new one
+        if (!$follow) {
+            //create a new follow relationship
+            $follow = Follow::create([
+                'follower_id' => auth()->id(),
+                'followed_id' => $userId,
+            ]);
+            // return response()->json(['message' => 'You are not following this user'], 404);
+        }
         $follow->delete();
         return response()->json(['message' => 'Deleted', 'status' => 'success'], 200);
     }
