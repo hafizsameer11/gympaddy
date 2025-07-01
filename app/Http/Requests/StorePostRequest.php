@@ -17,7 +17,7 @@ class StorePostRequest extends FormRequest
     public function rules()
     {
         return [
-            'title' => 'nullable|string|max:255',
+            'title' => 'nullable|string',
             'content' => 'nullable|string',
             'media' => 'nullable|array|max:10',
             'media.*' => 'file|mimes:jpeg,jpg,png,gif,mp4,mov,avi,wmv,flv|max:102400', // 100MB max
