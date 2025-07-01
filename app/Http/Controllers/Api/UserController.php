@@ -121,13 +121,18 @@ class UserController extends Controller
         $followingCount = Follow::where('follower_id', $userId)->count();
         $postCount = Post::where('user_id', $userId)->count();
         $posts = Post::where('user_id', $userId)->with(['likes', 'comments', 'media'])->get();
+        //check if authenticated user is following this user
+        $isFollowing = Follow::where('follower_id', Auth::id())
+            ->where('followed_id', $userId)
+            ->exists();
         return response()->json([
             'status' => 'success',
             'user' => $user,
             'followers_count' => $followersCount,
             'following_count' => $followingCount,
             'post_count' => $postCount,
-            'posts' => $posts
+            'posts' => $posts,
+            'is_following' => $isFollowing
         ]);
     }
 }
