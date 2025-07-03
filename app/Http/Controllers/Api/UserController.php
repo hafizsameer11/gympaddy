@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Business;
 use App\Models\Follow;
 use App\Models\Post;
 use Illuminate\Http\Request;
@@ -125,6 +126,9 @@ class UserController extends Controller
         $isFollowing = Follow::where('follower_id', Auth::id())
             ->where('followed_id', $userId)
             ->exists();
+            $business=Business::where('user_id', $userId)->where('status','approved')->exists();
+            //check does user have Business
+
         return response()->json([
             'status' => 'success',
             'user' => $user,
@@ -132,7 +136,8 @@ class UserController extends Controller
             'following_count' => $followingCount,
             'post_count' => $postCount,
             'posts' => $posts,
-            'is_following' => $isFollowing
+            'is_following' => $isFollowing,
+            'is_business' => $business
         ]);
     }
 }
