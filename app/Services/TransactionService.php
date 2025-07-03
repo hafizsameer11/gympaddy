@@ -16,6 +16,11 @@ class TransactionService
 
     public function store($validated)
     {
+        $wallet= Wallet::findOrFail($validated['wallet_id']);
+        $amount= $validated['amount'];
+        $gpcoin=$amount/2000;
+        $wallet->balance+=$gpcoin;
+        $wallet->save();
         $transaction = Transaction::create($validated);
         return response()->json($transaction, 201);
     }
