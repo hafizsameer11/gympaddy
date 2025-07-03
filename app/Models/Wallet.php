@@ -14,9 +14,9 @@ class Wallet extends Model
         'balance',
     ];
 
-    protected $attributes = [
-        'balance' => 0,
-    ];
+    // protected $attributes = [
+    //     'balance' => 0,
+    // ];
 
     public function user()
     {
