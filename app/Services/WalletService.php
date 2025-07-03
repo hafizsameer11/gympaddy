@@ -37,24 +37,42 @@ class WalletService
         return response()->json(['message' => 'Deleted']);
     }
 
-    public function topup($user, $validated)
-    {
-        $wallet = Wallet::where('user_id', $user->id)->firstOrFail();
-        $wallet->balance = $wallet->balance + $validated['amount'];
+public function topup($user, $validated)
+{
+    $wallet = Wallet::where('user_id', $user->id)->firstOrFail();
+
+    logger()->info('[Topup] BEFORE:', [
+        'user_id' => $user->id,
+        'current_balance' => $wallet->balance,
+        'topup_amount' => $validated['amount'],
+    ]);
+
+    $wallet->balance += $validated['amount'];
+
+    if ($wallet->isDirty('balance')) {
+        logger()->info('[Topup] Wallet is dirty. Proceeding to save.');
         $wallet->save();
-
-        Transaction::create([
-            'wallet_id' => $wallet->id,
-            'type' => 'topup',
-            'amount' => $validated['amount'],
-            'reference' => null,
-            'related_user_id' => null,
-            'meta' => null,
-            'status' => 'completed',
-        ]);
-
-        return response()->json($wallet);
+    } else {
+        logger()->warning('[Topup] Wallet not dirty. Nothing to save.');
     }
+
+    logger()->info('[Topup] AFTER:', [
+        'new_balance' => $wallet->fresh()->balance
+    ]);
+
+    Transaction::create([
+        'wallet_id' => $wallet->id,
+        'type' => 'topup',
+        'amount' => $validated['amount'],
+        'reference' => null,
+        'related_user_id' => null,
+        'meta' => null,
+        'status' => 'completed',
+    ]);
+
+    return response()->json($wallet->fresh());
+}
+
 
     public function withdraw($user, $validated)
     {
