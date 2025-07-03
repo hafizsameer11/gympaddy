@@ -20,6 +20,7 @@ class MarketplaceListingResource extends JsonResource
             'status' => $this->status,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'is_featured' => $this->is_featured, // ✅ new field for featured listings
 
             // ✅ only selected fields from related models
             'category' => [
