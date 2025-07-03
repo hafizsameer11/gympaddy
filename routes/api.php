@@ -29,6 +29,7 @@ use App\Http\Controllers\TicketController;
 use App\Http\Controllers\VideoCallController;
 use App\Http\Controllers\BoostController;
 use App\Http\Controllers\CallController;
+use App\Http\Controllers\StoryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
@@ -96,6 +97,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::get('/balance', [UserController::class, 'getBalance']);
     Route::post('edit-profile', [UserController::class, 'editProfile']);
     Route::post('device-token', [UserController::class, 'updateDeviceToken']); // <-- add this
+        Route::post('/stories', [StoryController::class, 'store']);
 
     // Posts
     Route::get('posts', [PostController::class, 'index']);
