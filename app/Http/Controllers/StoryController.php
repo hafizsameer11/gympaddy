@@ -12,7 +12,7 @@ class StoryController extends Controller
     {
         $request->validate([
             'media' => 'required|file',
-            'media_type' => 'required|in:image,video',
+            'media_type' => 'required',
             'caption' => 'nullable|string',
         ]);
 
