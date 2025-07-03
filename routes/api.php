@@ -90,9 +90,10 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
      Route::post('/start-call', [CallController::class, 'startCall']);
     Route::get('/incoming-call', [CallController::class, 'checkIncomingCall']);
     Route::post('/end-call', [CallController::class, 'endCall']);
-    
+
     Route::get('profile', [UserController::class, 'profile']);
     Route::get('userDetails/{userId}', [UserController::class, 'userDetails']); // <-- add this
+    Route::get('/balance', [UserController::class, 'getBalance']);
     Route::post('edit-profile', [UserController::class, 'editProfile']);
     Route::post('device-token', [UserController::class, 'updateDeviceToken']); // <-- add this
 

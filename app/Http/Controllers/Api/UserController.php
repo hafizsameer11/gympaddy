@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Business;
 use App\Models\Follow;
 use App\Models\Post;
+use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -138,6 +139,19 @@ class UserController extends Controller
             'posts' => $posts,
             'is_following' => $isFollowing,
             'is_business' => $business
+        ]);
+    }
+    public function getBalance(){
+        $wallet=Wallet::where('user_id', Auth::id())->first();
+        if (!$wallet) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Wallet not found',
+            ], 404);
+        }
+        return response()->json([
+            'status' => 'success',
+            'balance' => $wallet->balance,
         ]);
     }
 }
