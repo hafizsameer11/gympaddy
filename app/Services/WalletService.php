@@ -40,7 +40,7 @@ class WalletService
     public function topup($user, $validated)
     {
         $wallet = Wallet::where('user_id', $user->id)->firstOrFail();
-        $wallet->balance += $validated['amount'];
+        $wallet->balance = $wallet->balance + $validated['amount'];
         $wallet->save();
 
         Transaction::create([
