@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
+use Illuminate\Support\Facades\Log;
 
 class TransactionService
 {
@@ -19,6 +20,8 @@ class TransactionService
         $wallet= Wallet::findOrFail($validated['wallet_id']);
         $amount= $validated['amount'];
         $gpcoin=$amount/2000;
+        Log::info($gpcoin);
+        Log::info('Validated data: ', $validated);
         $wallet->balance+=$gpcoin;
         $wallet->save();
         $transaction = Transaction::create($validated);
