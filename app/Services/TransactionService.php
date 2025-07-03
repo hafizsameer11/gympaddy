@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Wallet;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class TransactionService
@@ -17,12 +18,14 @@ class TransactionService
 
     public function store($validated)
     {
-        $wallet= Wallet::findOrFail($validated['wallet_id']);
-        $amount= $validated['amount'];
-        $gpcoin=$amount/2000;
+        $user = Auth::user();
+        $wallet = Wallet::where('user_id', $user->id)->firstOrFail();
+        $amount = $validated['amount'];
+        $gpcoin = $amount / 2000;
         Log::info($gpcoin);
         Log::info('Validated data: ', $validated);
-        $wallet->balance+=$gpcoin;
+        $validated['wallet_id'] = $wallet->id;
+        $wallet->balance += $gpcoin;
         $wallet->save();
         $transaction = Transaction::create($validated);
         return response()->json($transaction, 201);
@@ -47,10 +50,10 @@ class TransactionService
     public function getForUser($userId)
     {
         $wallets = Wallet::where('user_id', $userId)->orderBy('created_at', 'desc')->first();
-        $transactions= Transaction::where('wallet_id', $wallets->id)->get();
+        $transactions = Transaction::where('wallet_id', $wallets->id)->get();
         $totalTopup = $transactions->where('type', 'topup')->sum('amount');
         $totalWithdraw = $transactions->where('type', 'withdraw')->sum('amount');
-        $currentBalance=$wallets->balance ?? 0;
+        $currentBalance = $wallets->balance ?? 0;
         return [
             'transactions' => $transactions,
             'totalTopup' => $totalTopup,
