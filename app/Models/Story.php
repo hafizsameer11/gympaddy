@@ -19,8 +19,19 @@ class Story extends Model
     /**
      * A story belongs to a user.
      */
+     protected $appends = ['full_media_url'];
+
+    /**
+     * A story belongs to a user.
+     */
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    // ✅ Accessor: full URL
+    public function getFullMediaUrlAttribute()
+    {
+        return asset('storage/' . $this->media_url);
     }
 }
