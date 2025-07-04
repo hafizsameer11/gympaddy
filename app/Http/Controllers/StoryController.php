@@ -41,7 +41,7 @@ class StoryController extends Controller
         $stories = Story::whereIn('user_id', $followingIds)
             ->where('expires_at', '>', now())
             ->orderBy('created_at', 'desc')
-            ->with('user')
+            ->with('user.profile_picture_url')
             ->get();
             return response()->json([
             'stories' => $stories,
