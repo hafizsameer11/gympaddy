@@ -36,7 +36,7 @@ class StoryController extends Controller
     public function getStories(){
         $user=Auth::user();
         $followingIds=Follow::where('follower_id', $user->id)
-            ->pluck('following_id')
+            ->pluck('followed_id')
             ->toArray();
         $stories = Story::whereIn('user_id', $followingIds)
             ->where('expires_at', '>', now())
