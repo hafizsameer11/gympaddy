@@ -130,43 +130,57 @@ public function store($validated)
         return response()->json(['message' => 'Deleted']);
     }
 
-    public function listConversations()
-    {
-        $user = auth()->user();
-        $conversations = Conversation::where('user1_id', $user->id)
-            ->orWhere('user2_id', $user->id)
-            ->with([
-                'user1:id,username,fullname,profile_picture',
-                'user2:id,username,fullname,profile_picture',
-                'messages' => function ($q) {
-                    $q->latest()->limit(1);
-                }
-            ])
-            ->get()
-            ->map(function ($conv) use ($user) {
-                $other = $conv->user1_id === $user->id ? $conv->user2 : $conv->user1;
-                return [
-                    'conversation_id' => $conv->id,
-                    'other_user' => [
-                        'id' => $other->id,
-                        'username' => $other->username,
-                        'fullname' => $other->fullname,
-                        'profile_picture_url' => $other->profile_picture ? asset('storage/' . $other->profile_picture) : null,
-                    ],
-                    'last_message' => $conv->messages->first(),
-                    'type' => $conv->type, // Include type if needed
-                    'created_at' => $conv->created_at,
-                    'updated_at' => $conv->updated_at,
-                    
-                ];
-            });
+ public function listConversations()
+{
+    $user = auth()->user();
 
-        return response()->json([
-            'status' => 'success',
-            'code' => 200,
-            'conversations' => $conversations,
-        ]);
-    }
+    $conversations = Conversation::where(function ($q) use ($user) {
+            $q->where('user1_id', $user->id)
+              ->orWhere('user2_id', $user->id);
+        })
+        ->with([
+            'user1:id,username,fullname,profile_picture',
+            'user2:id,username,fullname,profile_picture',
+            'messages' => function ($q) {
+                $q->latest()->limit(1);
+            }
+        ])
+        ->latest('updated_at')
+        ->get()
+        ->map(function ($conv) use ($user) {
+            // Identify the other user in the conversation
+            $otherUser = $conv->user1_id === $user->id ? $conv->user2 : $conv->user1;
+
+            return [
+                'conversation_id' => $conv->id,
+                'type' => $conv->type,
+                'other_user' => [
+                    'id' => $otherUser->id,
+                    'username' => $otherUser->username,
+                    'fullname' => $otherUser->fullname,
+                    'profile_picture_url' => $otherUser->profile_picture
+                        ? asset('storage/' . $otherUser->profile_picture)
+                        : null,
+                ],
+                'last_message' => $conv->messages->first() ? [
+                    'id' => $conv->messages->first()->id,
+                    'message' => $conv->messages->first()->message,
+                    'sender_id' => $conv->messages->first()->sender_id,
+                    'receiver_id' => $conv->messages->first()->receiver_id,
+                    'created_at' => $conv->messages->first()->created_at,
+                ] : null,
+                'created_at' => $conv->created_at,
+                'updated_at' => $conv->updated_at,
+            ];
+        });
+
+    return response()->json([
+        'status' => 'success',
+        'code' => 200,
+        'conversations' => $conversations,
+    ]);
+}
+
 
     private function findConversation($user1, $user2)
     {
