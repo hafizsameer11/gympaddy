@@ -11,6 +11,7 @@ class Conversation extends Model
 
     protected $fillable = [
         'user1_id',
+        'type', // 'social' or 'marketplace'
         'user2_id',
     ];
 
