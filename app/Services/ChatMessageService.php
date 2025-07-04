@@ -176,9 +176,10 @@ class ChatMessageService
                         'profile_picture_url' => $other->profile_picture ? asset('storage/' . $other->profile_picture) : null,
                     ],
                     'last_message' => $conv->messages->first(),
+                    'type' => $conv->type, // Include type if needed
                     'created_at' => $conv->created_at,
                     'updated_at' => $conv->updated_at,
-                    'type' => $conv->type, // Include type if needed
+                    
                 ];
             });
 
