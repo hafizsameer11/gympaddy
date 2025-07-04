@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\ChatMessage;
 use App\Http\Requests\StoreChatMessageRequest;
 use App\Http\Requests\UpdateChatMessageRequest;
+use App\Models\Conversation;
 use App\Services\ChatMessageService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,21 +22,21 @@ class ChatMessageController extends Controller
     /**
      * Display a listing of the resource.
      */
-  public function index(Request $request)
-{
-    // Optionally filter by receiver_id for 1-on-1 chat
-    $params = [];
+    public function index(Request $request)
+    {
+        // Optionally filter by receiver_id for 1-on-1 chat
+        $params = [];
 
-    if ($request->has('receiver_id')) {
-        $params['receiver_id'] = $request->query('receiver_id');
+        if ($request->has('receiver_id')) {
+            $params['receiver_id'] = $request->query('receiver_id');
+        }
+
+        if ($request->has('conversation_id')) {
+            $params['conversation_id'] = $request->query('conversation_id');
+        }
+
+        return $this->chatMessageService->index($params);
     }
-
-    if ($request->has('conversation_id')) {
-        $params['conversation_id'] = $request->query('conversation_id');
-    }
-
-    return $this->chatMessageService->index($params);
-}
 
 
     /**
@@ -54,6 +55,36 @@ class ChatMessageController extends Controller
         $data = $request->validated();
         $data['sender_id'] = Auth::id();
         return $this->chatMessageService->store($data);
+    }
+    public function storeMarketplaceMessage(Request $request)
+    {
+        $request->validate([
+            'sender_id' => 'required|exists:users,id',
+            'receiver_id' => 'required|exists:users,id',
+            'message' => 'required|string|max:500',
+        ]);
+        $conversation = Conversation::where('user1_id', $request->sender_id)->where('user2_id', $request->receiver_id)
+            ->where('type', 'marketplace')
+            ->first();
+        if (!$conversation) {
+            $conversation = Conversation::create([
+                'user1_id' => $request->sender_id,
+                'user2_id' => $request->receiver_id,
+                'type' => 'marketplace',
+            ]);
+        }
+
+        $chatMessage = ChatMessage::create([
+            'conversation_id' => $conversation->id,
+            'sender_id' => $request->sender_id,
+            'receiver_id' => $request->receiver_id,
+            'message' => $request->message,
+        ]);
+
+        return response()->json([
+            'message' => 'Message sent successfully',
+            'chat_message' => $chatMessage
+        ], 201);
     }
 
     /**

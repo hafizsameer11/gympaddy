@@ -221,6 +221,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     // Chat Messages
     Route::get('chat-messages', [ChatMessageController::class, 'index']);
     Route::post('chat-messages', [ChatMessageController::class, 'store']);
+    Route::post('chat-messages-marketp[ace', [ChatMessageController::class, 'storeMarketplaceMessage']);
     Route::get('chat-messages/{chat_message}', [ChatMessageController::class, 'show']);
     Route::put('chat-messages/{chat_message}', [ChatMessageController::class, 'update']);
     Route::delete('chat-messages/{chat_message}', [ChatMessageController::class, 'destroy']);
