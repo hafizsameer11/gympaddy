@@ -10,82 +10,60 @@ use Illuminate\Support\Facades\DB;
 
 class ChatMessageService
 {
-    public function index($params = [])
-    {
-        $user = auth()->user();
+ public function index($params = [])
+{
+    $user = auth()->user();
 
-        // Filter by conversation_id
-        if (isset($params['conversation_id'])) {
-            $conversation = Conversation::find($params['conversation_id']);
-            if (!$conversation || ($conversation->user1_id !== $user->id && $conversation->user2_id !== $user->id)) {
-                return response()->json(['data' => []]);
-            }
-
-            $messages = ChatMessage::with(['sender:id,username,fullname,profile_picture', 'receiver:id,username,fullname,profile_picture'])
-                ->where('conversation_id', $conversation->id)
-                ->orderBy('created_at', 'asc')
-                ->get()
-                ->map(function ($message) use ($user) {
-                    return [
-                        'id' => $message->id,
-                        'message' => $message->message,
-                        'sender' => $message->sender,
-                        'receiver' => $message->receiver,
-                        'direction' => $message->sender_id === $user->id ? 'sent' : 'received',
-                        'created_at' => $message->created_at,
-                    ];
-                });
-
-            return response()->json([
-                'conversation_id' => $conversation->id,
-                'messages' => $messages,
-            ]);
-        }
-
-        // Optionally filter by receiver_id (for 1-on-1 chat)
-        $receiverId = $params['receiver_id'] ?? null;
-
-        if ($receiverId) {
-            $conversation = $this->findConversation($user->id, $receiverId);
-            if (!$conversation) {
-                return response()->json(['data' => []]);
-            }
-
-            $messages = ChatMessage::with(['sender:id,username,fullname,profile_picture', 'receiver:id,username,fullname,profile_picture'])
-                ->where('conversation_id', $conversation->id)
-                ->orderBy('created_at', 'asc')
-                ->get()
-                ->map(function ($message) use ($user) {
-                    return [
-                        'id' => $message->id,
-                        'message' => $message->message,
-                        'sender' => $message->sender,
-                        'receiver' => $message->receiver,
-                        'direction' => $message->sender_id === $user->id ? 'sent' : 'received',
-                        'created_at' => $message->created_at,
-                    ];
-                });
-
-            return response()->json([
-                'conversation_id' => $conversation->id,
-                'messages' => $messages,
-            ]);
-        }
-
-        // Otherwise, return all conversations for the user with last message
-        $conversations = Conversation::where('user1_id', $user->id)
-            ->orWhere('user2_id', $user->id)
-            ->with([
-                'user1:id,username,fullname,profile_picture',
-                'user2:id,username,fullname,profile_picture',
-                'messages' => function ($q) {
-                    $q->latest()->limit(1);
-                }
-            ])
-            ->get();
-
-        return response()->json($conversations);
+    // ✅ Require conversation_id
+    if (!isset($params['conversation_id'])) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'conversation_id is required',
+            'data' => [],
+        ], 400);
     }
+
+    // ✅ Fetch and validate conversation
+    $conversation = Conversation::find($params['conversation_id']);
+
+    if (
+        !$conversation ||
+        ($conversation->user1_id !== $user->id && $conversation->user2_id !== $user->id)
+    ) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Conversation not found or access denied',
+            'data' => [],
+        ], 403);
+    }
+
+    // ✅ Fetch messages
+    $messages = ChatMessage::with([
+            'sender:id,username,fullname,profile_picture',
+            'receiver:id,username,fullname,profile_picture'
+        ])
+        ->where('conversation_id', $conversation->id)
+        ->orderBy('created_at', 'asc')
+        ->get()
+        ->map(function ($message) use ($user) {
+            return [
+                'id' => $message->id,
+                'message' => $message->message,
+                'sender' => $message->sender,
+                'receiver' => $message->receiver,
+                'direction' => $message->sender_id === $user->id ? 'sent' : 'received',
+                'created_at' => $message->created_at,
+            ];
+        });
+
+    return response()->json([
+        'status' => 'success',
+        'conversation_id' => $conversation->id,
+        'type' => $conversation->type,
+        'messages' => $messages,
+    ]);
+}
+
 
 
 public function store($validated)
