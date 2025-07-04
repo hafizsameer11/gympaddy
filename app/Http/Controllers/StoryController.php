@@ -41,11 +41,11 @@ class StoryController extends Controller
         $stories = Story::whereIn('user_id', $followingIds)
             ->where('expires_at', '>', now())
             ->orderBy('created_at', 'desc')
+            ->with('user')
             ->get();
             return response()->json([
             'stories' => $stories,
             'status' => 'success',
-            'user' => $user,
             'message' => 'Stories retrieved successfully'
         ], 200);
     }
