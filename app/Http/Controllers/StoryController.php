@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Follow;
 use App\Models\Story;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class StoryController extends Controller
@@ -30,5 +32,43 @@ class StoryController extends Controller
             'message' => 'Story uploaded successfully',
             'story' => $story
         ], 201);
+    }
+    public function getStories(){
+        $user=Auth::user();
+        $followingIds=Follow::where('follower_id', $user->id)
+            ->pluck('following_id')
+            ->toArray();
+        $stories = Story::whereIn('user_id', $followingIds)
+            ->where('expires_at', '>', now())
+            ->orderBy('created_at', 'desc')
+            ->get();
+            return response()->json([
+            'stories' => $stories,
+            'status' => 'success',
+            'message' => 'Stories retrieved successfully'
+        ], 200);
+    }
+    public function viewStory($storyId)
+    {
+        $user = Auth::user();
+        $story = Story::findOrFail($storyId);
+
+        // Check if the story is still valid
+        if ($story->expires_at < now()) {
+            return response()->json(['message' => 'Story has expired'], 404);
+        }
+
+        // Record the view
+        $storyView = $story->views()->firstOrCreate([
+            'user_id' => $user->id,
+        ], [
+            'viewed_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Story viewed successfully',
+            'story' => $story,
+            'view' => $storyView,
+        ]);
     }
 }

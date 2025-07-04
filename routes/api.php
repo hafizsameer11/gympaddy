@@ -88,7 +88,7 @@ Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     // User Profile
 
-     Route::post('/start-call', [CallController::class, 'startCall']);
+    Route::post('/start-call', [CallController::class, 'startCall']);
     Route::get('/incoming-call', [CallController::class, 'checkIncomingCall']);
     Route::post('/end-call', [CallController::class, 'endCall']);
 
@@ -97,7 +97,10 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::get('/balance', [UserController::class, 'getBalance']);
     Route::post('edit-profile', [UserController::class, 'editProfile']);
     Route::post('device-token', [UserController::class, 'updateDeviceToken']); // <-- add this
-        Route::post('/stories', [StoryController::class, 'store']);
+    Route::post('/stories', [StoryController::class, 'store']);
+    Route::get('/get/stories', [StoryController::class, 'getStories']);
+    Route::get('view-story/{storyId}', [StoryController::class, 'viewStory']);
+    // Route::get('/get/stories/{id}',[StoryController::class, 'getStorysById']);
 
     // Posts
     Route::get('posts', [PostController::class, 'index']);
@@ -250,7 +253,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('video-call/end', [\App\Http\Controllers\VideoCallController::class, 'endCall']);
     Route::get('video-call/history', [\App\Http\Controllers\VideoCallController::class, 'getCallHistory']);
     Route::post('video-call/live-token', [\App\Http\Controllers\VideoCallController::class, 'generateLiveToken']);
-
 });
 
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
@@ -271,4 +273,4 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
         Route::post('update-status/{id}', [AdminBusinessController::class, 'updateStatus']);
     });
 });
-    Route::get('video-call/token', [VideoCallController::class, 'getToken']);
+Route::get('video-call/token', [VideoCallController::class, 'getToken']);
