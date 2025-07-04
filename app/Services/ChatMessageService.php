@@ -178,6 +178,7 @@ class ChatMessageService
                     'last_message' => $conv->messages->first(),
                     'created_at' => $conv->created_at,
                     'updated_at' => $conv->updated_at,
+                    'type' => $conv->type, // Include type if needed
                 ];
             });
 
