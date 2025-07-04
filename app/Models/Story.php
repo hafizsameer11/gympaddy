@@ -32,6 +32,6 @@ class Story extends Model
     // ✅ Accessor: full URL
     public function getFullMediaUrlAttribute()
     {
-        return asset('storage/' . $this->media_url);
+        return asset( $this->media_url);
     }
 }
