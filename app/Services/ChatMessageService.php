@@ -88,50 +88,50 @@ class ChatMessageService
     }
 
 
-    public function store($validated)
-    {
-        $senderId = $validated['sender_id'];
-        $receiverId = $validated['receiver_id'];
+public function store($validated)
+{
+    $senderId = $validated['sender_id'];
+    $receiverId = $validated['receiver_id'];
 
-        // Support marketplace listing chat (optional: pass listing_id in $validated)
-        if (isset($validated['listing_id'])) {
-            $listing = MarketplaceListing::find($validated['listing_id']);
-            if ($listing) {
-                $receiverId = $listing->user_id;
-            }
+    // Optional: handle marketplace logic
+    if (isset($validated['listing_id'])) {
+        $listing = MarketplaceListing::find($validated['listing_id']);
+        if ($listing) {
+            $receiverId = $listing->user_id;
         }
-
-        // Always order user1_id < user2_id for uniqueness
-        [$user1, $user2] = $senderId < $receiverId
-            ? [$senderId, $receiverId]
-            : [$receiverId, $senderId];
-
-        // Find or create conversation (bi-directional)
-        $conversation = $this->findConversation($user1, $user2);
-        if (!$conversation) {
-            $conversation = Conversation::create([
-                'user1_id' => $user1,
-                'user2_id' => $user2,
-            ]);
-        }
-
-        // Create the message
-        $message = ChatMessage::create([
-            'conversation_id' => $conversation->id,
-            'sender_id' => $senderId,
-            'receiver_id' => $receiverId,
-            'message' => $validated['message'],
-        ]);
-
-        $message->load(['sender', 'receiver', 'conversation']);
-
-        return response()->json([
-            'status' => 'success',
-            'code' => 201,
-            'message' => 'Message sent',
-            'data' => $message
-        ], 201);
     }
+
+    // Search for conversation strictly by sender & receiver & type = 'social'
+    $conversation = Conversation::where('user1_id', $senderId)
+        ->where('user2_id', $receiverId)
+        ->where('type', 'social')
+        ->first();
+
+    if (!$conversation) {
+        $conversation = Conversation::create([
+            'user1_id' => $senderId,
+            'user2_id' => $receiverId,
+            'type' => 'social',
+        ]);
+    }
+
+    $message = ChatMessage::create([
+        'conversation_id' => $conversation->id,
+        'sender_id' => $senderId,
+        'receiver_id' => $receiverId,
+        'message' => $validated['message'],
+    ]);
+
+    $message->load(['sender', 'receiver', 'conversation']);
+
+    return response()->json([
+        'status' => 'success',
+        'code' => 201,
+        'message' => 'Message sent',
+        'data' => $message
+    ], 201);
+}
+
 
     public function show(ChatMessage $chatMessage)
     {
