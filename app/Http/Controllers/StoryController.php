@@ -45,6 +45,7 @@ class StoryController extends Controller
             return response()->json([
             'stories' => $stories,
             'status' => 'success',
+            'user' => $user,
             'message' => 'Stories retrieved successfully'
         ], 200);
     }
