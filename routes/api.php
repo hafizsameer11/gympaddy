@@ -248,12 +248,12 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 
 // Agora video/voice call endpoints
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('video-call/token', [\App\Http\Controllers\VideoCallController::class, 'generateToken']);
+    Route::post('video-call/token', [VideoCallController::class, 'generateToken']);
 
-    Route::post('video-call/start', [\App\Http\Controllers\VideoCallController::class, 'startCall']);
-    Route::post('video-call/end', [\App\Http\Controllers\VideoCallController::class, 'endCall']);
-    Route::get('video-call/history', [\App\Http\Controllers\VideoCallController::class, 'getCallHistory']);
-    Route::post('video-call/live-token', [\App\Http\Controllers\VideoCallController::class, 'generateLiveToken']);
+    Route::post('video-call/start', [VideoCallController::class, 'startCall']);
+    Route::post('video-call/end', [VideoCallController::class, 'endCall']);
+    Route::get('video-call/history', [VideoCallController::class, 'getCallHistory']);
+    Route::post('video-call/live-token', [VideoCallController::class, 'generateLiveToken']);
 });
 
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
