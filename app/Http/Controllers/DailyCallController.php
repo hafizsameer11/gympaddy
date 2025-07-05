@@ -36,7 +36,7 @@ class DailyCallController extends Controller
         }
 
         $roomUrl = $response->json('url');
-
+        Log::info('Daily room created with response', $response->json());
         $call = DailyCall::create([
             'caller_id' => auth()->id(),
             'receiver_id' => $validated['receiver_id'],
@@ -44,7 +44,7 @@ class DailyCallController extends Controller
             'room_url' => $roomUrl,
             'type' => $validated['type'],
             'status' => 'initiated',
-            'response' => json_encode($response->json()),
+            // 'response' => json_encode($response->json()),
         ]);
 
         return response()->json(['call' => $call]);
