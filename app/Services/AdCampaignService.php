@@ -15,7 +15,6 @@ class AdCampaignService
 public function getBoostedCampaigns()
 {
     return AdCampaign::with(['adable.media', 'user']) // Polymorphic eager load
-        ->where('type', 'boosted')
         ->get()
         ->map(function ($campaign) {
             $adable = $campaign->adable;
