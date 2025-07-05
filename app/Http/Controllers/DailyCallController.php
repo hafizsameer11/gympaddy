@@ -21,7 +21,6 @@ class DailyCallController extends Controller
             ->post('https://api.daily.co/v1/rooms', [
                 'name' => $ChannelName,
                 'properties' => [
-                    'videoSource'=>false,
                     
                     'start_video_off' => $validated['type'] === 'voice',
                     'start_audio_off' => false,
