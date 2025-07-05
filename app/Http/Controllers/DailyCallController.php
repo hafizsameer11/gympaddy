@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\DailyCall;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class DailyCallController extends Controller
 {
@@ -28,6 +29,10 @@ class DailyCallController extends Controller
             ]);
 
         if (!$response->successful()) {
+            Log::info('Daily API response error', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
             return response()->json(['error' => 'Failed to create Daily room'], 500);
         }
 
