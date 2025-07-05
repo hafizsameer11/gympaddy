@@ -29,6 +29,7 @@ use App\Http\Controllers\TicketController;
 use App\Http\Controllers\VideoCallController;
 use App\Http\Controllers\BoostController;
 use App\Http\Controllers\CallController;
+use App\Http\Controllers\DailyCallController;
 use App\Http\Controllers\StoryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -244,6 +245,10 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     // Boost Posts
     Route::post('boost-post/{postId}', [BoostController::class, 'boostPost']);
     Route::post('boost-listing/{listingId}', [BoostController::class, 'boostMarketplaceListing']);
+
+     Route::post('/start-call', [DailyCallController::class, 'startCall']);
+    Route::get('/user/incoming-call', [DailyCallController::class, 'incomingCall']);
+    Route::post('/end-call', [DailyCallController::class, 'endCall']);
 });
 
 // Agora video/voice call endpoints
