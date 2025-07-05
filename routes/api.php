@@ -159,6 +159,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 
     // Marketplace Listings
     Route::get('marketplace-listings', [MarketplaceListingController::class, 'index']);
+    Route::get('user-listing',[MarketplaceListingController::class, 'listing']);
     Route::post('marketplace-listings', [MarketplaceListingController::class, 'store']);
     Route::get('marketplace-listings/{marketplace_listing}', [MarketplaceListingController::class, 'show']);
     Route::put('marketplace-listings/{marketplace_listing}', [MarketplaceListingController::class, 'update']);
@@ -245,6 +246,12 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     // Boost Posts
     Route::post('boost-post/{postId}', [BoostController::class, 'boostPost']);
     Route::post('boost-listing/{listingId}', [BoostController::class, 'boostMarketplaceListing']);
+    Route::post('/marketplace-listings/{listingId}/boost', [BoostController::class, 'boostMarketplaceListing']);
+    Route::put('/campaigns/{campaignId}/update-listing', [BoostController::class, 'updateBoostedMarketplace']);
+
+// Pause/Resume
+Route::post('/campaigns/{campaignId}/toggle-status', [BoostController::class, 'toggleCampaignStatus']);
+
 
     Route::post('/start-daily-call', [DailyCallController::class, 'startCall']);
     Route::get('/user/incoming-daily-call', [DailyCallController::class, 'incomingCall']);
