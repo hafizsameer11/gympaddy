@@ -44,7 +44,7 @@ class DailyCallController extends Controller
             'room_url' => $roomUrl,
             'type' => $validated['type'],
             'status' => 'initiated',
-            'response' => $response->json(),
+            'response' => json_encode($response->json()),
         ]);
 
         return response()->json(['call' => $call]);
