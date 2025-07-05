@@ -13,12 +13,12 @@ class DailyCallController extends Controller
         $validated = $request->validate([
             'receiver_id' => 'required|integer',
             'type' => 'required|in:voice,video',
-            'channel_name' => 'required|string|unique:daily_calls,channel_name',
-        ]);
 
+        ]);
+        $ChannelName = 'call_' . auth()->id() . '_' . $validated['receiver_id'] . '_' . time();
         $response = Http::withToken(env('DAILY_API_KEY','cf73c3f73ef9cfdcd4e250bd2e461c51222610422eaaf089cefc2fc27d873e4f'))
             ->post('https://api.daily.co/v1/rooms', [
-                'name' => $validated['channel_name'],
+                'name' => $ChannelName,
                 'properties' => [
                     'audio' => true,
                     'video' => $validated['type'] === 'video',
@@ -36,7 +36,7 @@ class DailyCallController extends Controller
         $call = DailyCall::create([
             'caller_id' => auth()->id(),
             'receiver_id' => $validated['receiver_id'],
-            'channel_name' => $validated['channel_n ame'],
+            'channel_name' => $ChannelName,
             'room_url' => $roomUrl,
             'type' => $validated['type'],
             'status' => 'initiated',
