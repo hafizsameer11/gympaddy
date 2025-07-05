@@ -104,6 +104,8 @@ class AdCampaignService
 
     public function show(AdCampaign $adCampaign)
     {
+        //return ad compaign with dproper data of media
+        
         return $adCampaign;
     }
 
