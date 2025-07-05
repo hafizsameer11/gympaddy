@@ -246,9 +246,9 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('boost-post/{postId}', [BoostController::class, 'boostPost']);
     Route::post('boost-listing/{listingId}', [BoostController::class, 'boostMarketplaceListing']);
 
-     Route::post('/start-call', [DailyCallController::class, 'startCall']);
-    Route::get('/user/incoming-call', [DailyCallController::class, 'incomingCall']);
-    Route::post('/end-call', [DailyCallController::class, 'endCall']);
+     Route::post('/start-daily-call', [DailyCallController::class, 'startCall']);
+    Route::get('/user/incoming-daily-call', [DailyCallController::class, 'incomingCall']);
+    Route::post('/end-daily-call', [DailyCallController::class, 'endCall']);
 });
 
 // Agora video/voice call endpoints
