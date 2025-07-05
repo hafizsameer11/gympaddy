@@ -28,6 +28,7 @@ class AdCampaignService
                 'content' => $campaign->content,
                 'media_url' => $campaign->media,
                 'budget' => $campaign->budget,
+                'gender'=>$campaign->gender,
                 'status' => $campaign->status,
                 'type' => $campaign->type,
                 'created_at' => $campaign->created_at,
