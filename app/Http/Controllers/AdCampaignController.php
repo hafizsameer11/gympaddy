@@ -83,8 +83,6 @@ class AdCampaignController extends Controller
                 'profile_picture_url' => $adCampaign->user->profile_picture_url,
             ],
         ];
-
-        // Attach adable data (post or listing) with media
         if ($adable instanceof \App\Models\Post) {
             $response['post'] = [
                 'id' => $adable->id,
