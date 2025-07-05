@@ -246,7 +246,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     // Boost Posts
     Route::post('boost-post/{postId}', [BoostController::class, 'boostPost']);
     Route::post('boost-listing/{listingId}', [BoostController::class, 'boostMarketplaceListing']);
-    Route::post('/marketplace-listings/{listingId}/boost', [BoostController::class, 'boostMarketplaceListing']);
+    Route::post('/marketplace-listings/{listingId}/update', [BoostController::class, 'updateBoostedMarketplace']);
     Route::put('/campaigns/{campaignId}/update-listing', [BoostController::class, 'updateBoostedMarketplace']);
 
     // Pause/Resume
