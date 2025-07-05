@@ -27,7 +27,7 @@ public function getBoostedCampaigns()
                 'name' => $campaign->name,
                 'title' => $campaign->title,
                 'content' => $campaign->content,
-                'media_url' => $campaign->media_url,
+                'media_url' => $campaign->media,
                 'budget' => $campaign->budget,
                 'status' => $campaign->status,
                 'type' => $campaign->type,
