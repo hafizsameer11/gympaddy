@@ -12,85 +12,86 @@ class AdCampaignService
     {
         return AdCampaign::all();
     }
-    public function getBoostedCampaigns()
-    {
-        return AdCampaign::with(['adable.media', 'user'])->orderBy(
-            'created_at',
-            'desc'
-        )
-            // Polymorphic eager load
-            ->get()
-            ->map(function ($campaign) {
-                $adable = $campaign->adable;
+ public function getBoostedCampaigns()
+{
+    return AdCampaign::with(['adable', 'user'])
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($campaign) {
+            $adable = $campaign->adable;
 
-                $baseData = [
-                    'id' => $campaign->id,
-                    'user_id' => $campaign->user_id,
-                    'name' => $campaign->name,
-                    'title' => $campaign->title,
-                    'content' => $campaign->content,
-                    'media_url' => $campaign->media,
-                    'budget' => $campaign->budget,
-                    'status' => $campaign->status,
-                    'type' => $campaign->type,
-                    'created_at' => $campaign->created_at,
-                    'updated_at' => $campaign->updated_at,
-                    'user' => [
-                        'id' => $campaign->user->id,
-                        'username' => $campaign->user->username,
-                        'fullname' => $campaign->user->fullname,
-                        'email' => $campaign->user->email,
-                        'phone' => $campaign->user->phone,
-                        'profile_picture_url' => $campaign->user->profile_picture_url,
-                    ],
+            $baseData = [
+                'id' => $campaign->id,
+                'user_id' => $campaign->user_id,
+                'name' => $campaign->name,
+                'title' => $campaign->title,
+                'content' => $campaign->content,
+                'media_url' => $campaign->media,
+                'budget' => $campaign->budget,
+                'status' => $campaign->status,
+                'type' => $campaign->type,
+                'created_at' => $campaign->created_at,
+                'updated_at' => $campaign->updated_at,
+                'user' => [
+                    'id' => $campaign->user->id,
+                    'username' => $campaign->user->username,
+                    'fullname' => $campaign->user->fullname,
+                    'email' => $campaign->user->email,
+                    'phone' => $campaign->user->phone,
+                    'profile_picture_url' => $campaign->user->profile_picture_url,
+                ],
+            ];
+
+            // Handle Post (has a media relation)
+            if ($adable instanceof \App\Models\Post) {
+                $baseData['post'] = [
+                    'id' => $adable->id,
+                    'title' => $adable->title,
+                    'content' => $adable->content,
+                    'media_type' => $adable->media_type,
+                    'is_boosted' => $adable->is_boosted,
+                    'created_at' => $adable->created_at,
+                    'media' => $adable->media->map(function ($media) {
+                        return [
+                            'id' => $media->id,
+                            'file_name' => $media->file_name,
+                            'media_type' => $media->media_type,
+                            'mime_type' => $media->mime_type,
+                            'file_size' => $media->file_size,
+                            'order' => $media->order,
+                            'url' => $media->url,
+                        ];
+                    }),
                 ];
+            }
 
-                // Handle Post or Listing
-                if ($adable instanceof \App\Models\Post) {
-                    $baseData['post'] = [
-                        'id' => $adable->id,
-                        'title' => $adable->title,
-                        'content' => $adable->content,
-                        'media_type' => $adable->media_type,
-                        'is_boosted' => $adable->is_boosted,
-                        'created_at' => $adable->created_at,
-                        'media' => $adable->media->map(function ($media) {
-                            return [
-                                'id' => $media->id,
-                                'file_name' => $media->file_name,
-                                'media_type' => $media->media_type,
-                                'mime_type' => $media->mime_type,
-                                'file_size' => $media->file_size,
-                                'order' => $media->order,
-                                'url' => $media->url,
-                            ];
-                        }),
-                    ];
-                } elseif ($adable instanceof \App\Models\MarketplaceListing) {
-                    $baseData['listing'] = [
-                        'id' => $adable->id,
-                        'title' => $adable->title,
-                        'description' => $adable->description,
-                        'price' => $adable->price,
-                        'is_boosted' => $adable->is_boosted,
-                        'created_at' => $adable->created_at,
-                        'media' => $adable->media->map(function ($media) {
-                            return [
-                                'id' => $media->id,
-                                'file_name' => $media->file_name,
-                                'media_type' => $media->media_type,
-                                'mime_type' => $media->mime_type,
-                                'file_size' => $media->file_size,
-                                'order' => $media->order,
-                                'url' => $media->url,
-                            ];
-                        }),
-                    ];
-                }
+            // Handle Marketplace Listing (media stored as array)
+            elseif ($adable instanceof \App\Models\MarketplaceListing) {
+                $baseData['listing'] = [
+                    'id' => $adable->id,
+                    'title' => $adable->title,
+                    'description' => $adable->description,
+                    'price' => $adable->price,
+                    'is_boosted' => $adable->is_boosted,
+                    'created_at' => $adable->created_at,
+                    'media' => collect($adable->media_urls)->map(function ($url, $index) {
+                        return [
+                            'id' => null,
+                            'file_name' => basename($url),
+                            'media_type' => 'image', // You can update logic to detect video etc.
+                            'mime_type' => null,
+                            'file_size' => null,
+                            'order' => $index,
+                            'url' => $url,
+                        ];
+                    }),
+                ];
+            }
 
-                return $baseData;
-            });
-    }
+            return $baseData;
+        });
+}
+
 
 
 
@@ -105,7 +106,7 @@ class AdCampaignService
     public function show(AdCampaign $adCampaign)
     {
         //return ad compaign with dproper data of media
-        
+
         return $adCampaign;
     }
 

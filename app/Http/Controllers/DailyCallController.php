@@ -14,41 +14,49 @@ class DailyCallController extends Controller
         $validated = $request->validate([
             'receiver_id' => 'required|integer',
             'type' => 'required|in:voice,video',
-
         ]);
-        $ChannelName = 'call_' . auth()->id() . '_' . $validated['receiver_id'] . '_' . time();
-        $response = Http::withToken(env('DAILY_API_KEY','cf73c3f73ef9cfdcd4e250bd2e461c51222610422eaaf089cefc2fc27d873e4f'))
-            ->post('https://api.daily.co/v1/rooms', [
-                'name' => $ChannelName,
-                'properties' => [
-                    
-                    'start_video_off' => $validated['type'] === 'voice',
-                    'start_audio_off' => false,
-                ]
-            ]);
 
-        if (!$response->successful()) {
-            Log::info('Daily API response error', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-            return response()->json(['error' => 'Failed to create Daily room'], 500);
+        $channelName = 'call_' . auth()->id() . '_' . $validated['receiver_id'] . '_' . time();
+
+        $roomUrl = null;
+
+        if ($validated['type'] === 'video') {
+            $response = Http::withToken(env('DAILY_API_KEY', 'cf73c3f73ef9cfdcd4e250bd2e461c51222610422eaaf089cefc2fc27d873e4f'))
+                ->post('https://api.daily.co/v1/rooms', [
+                    'name' => $channelName,
+                    'properties' => [
+                        'start_video_off' => false,
+                        'start_audio_off' => false,
+                    ]
+                ]);
+
+            if (!$response->successful()) {
+                Log::info('Daily API response error', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return response()->json(['error' => 'Failed to create Daily room'], 500);
+            }
+
+            $roomUrl = $response->json('url');
+            Log::info('Daily room created with response', $response->json());
+        } else {
+            // Voice call - generate pseudo room URL or identifier
+            $roomUrl = $channelName; // store this as identifier for voice call
         }
 
-        $roomUrl = $response->json('url');
-        Log::info('Daily room created with response', $response->json());
         $call = DailyCall::create([
-            'caller_id' => auth()->id(),
-            'receiver_id' => $validated['receiver_id'],
-            'channel_name' => $ChannelName,
-            'room_url' => $roomUrl,
-            'type' => $validated['type'],
-            'status' => 'initiated',
-            // 'response' => json_encode($response->json()),
+            'caller_id'     => auth()->id(),
+            'receiver_id'   => $validated['receiver_id'],
+            'channel_name'  => $channelName,
+            'room_url'      => $roomUrl,
+            'type'          => $validated['type'],
+            'status'        => 'initiated',
         ]);
 
         return response()->json(['call' => $call]);
     }
+
 
     public function incomingCall(Request $request)
     {
@@ -67,7 +75,7 @@ class DailyCallController extends Controller
         $call = DailyCall::where('channel_name', $request->channel_name)
             ->where(function ($q) {
                 $q->where('caller_id', auth()->id())
-                  ->orWhere('receiver_id', auth()->id());
+                    ->orWhere('receiver_id', auth()->id());
             })
             ->firstOrFail();
 
