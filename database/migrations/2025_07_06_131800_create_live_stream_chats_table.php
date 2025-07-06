@@ -20,7 +20,7 @@ return new class extends Migration
 
             // Optional: add foreign key constraints if tables exist
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
-            $table->foreign('live_id')->references('id')->on('live_streams')->onDelete('cascade');
+            $table->foreign('live_stream_id')->references('id')->on('live_streams')->onDelete('cascade');
         });
     }
 
