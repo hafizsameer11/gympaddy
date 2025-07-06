@@ -53,6 +53,7 @@ class ChatMessageService
                     'receiver' => $message->receiver,
                     'direction' => $message->sender_id === $user->id ? 'sent' : 'received',
                     'created_at' => $message->created_at,
+                    'image'=>$message->image
                 ];
             });
 

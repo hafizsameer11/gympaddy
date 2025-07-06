@@ -3,12 +3,14 @@
 namespace App\Services;
 
 use App\Models\Notification;
+use Illuminate\Support\Facades\Auth;
 
 class NotificationService
 {
     public function index()
     {
-        return Notification::all();
+        $user=Auth::user();
+                return Notification::where('user_id',$user->id)->latest()->get();
     }
 
     public function store($user, $validated)
