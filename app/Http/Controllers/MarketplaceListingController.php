@@ -64,40 +64,10 @@ class MarketplaceListingController extends Controller
     /**
      * Update the specified resource in storage.
      */
-   public function update(UpdateMarketplaceListingRequest $request, MarketplaceListing $marketplaceListing)
-{
-    $validated = $request->validated();
-    $data = $validated;
-
-    // Allow client to pass which images to keep
-    $existingMedia = $request->input('existing_media', []); // Array of existing image paths
-
-    // Handle new image uploads (same as in store)
-    $mediaUrls = [];
-    if ($request->hasFile('media_files')) {
-        foreach ($request->file('media_files') as $file) {
-            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $path = $file->storeAs('marketplace_media', $filename, 'public');
-            $mediaUrls[] = $path;
-        }
+    public function update(UpdateMarketplaceListingRequest $request, MarketplaceListing $marketplaceListing)
+    {
+        return $this->marketplaceListingService->update($marketplaceListing, $request->validated());
     }
-
-    // Merge old images the user kept with newly uploaded ones
-    $mergedMedia = array_merge($existingMedia, $mediaUrls);
-    $data['media_urls'] = $mergedMedia;
-
-    // Laravel will cast to array if you set $casts['media_urls'] = 'array' in model
-
-    // Actually update the record
-    $marketplaceListing->update($data);
-
-    return response()->json([
-        'status' => 'success',
-        'code' => 200,
-        'message' => 'Listing updated successfully',
-        'data' => $marketplaceListing
-    ]);
-}
 
     /**
      * Remove the specified resource from storage.
