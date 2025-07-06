@@ -30,6 +30,9 @@ use App\Http\Controllers\VideoCallController;
 use App\Http\Controllers\BoostController;
 use App\Http\Controllers\CallController;
 use App\Http\Controllers\DailyCallController;
+use App\Http\Controllers\LiveStreamAudienceController;
+use App\Http\Controllers\LiveStreamChatController;
+use App\Http\Controllers\LiveStreamGiftController;
 use App\Http\Controllers\StoryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -159,7 +162,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 
     // Marketplace Listings
     Route::get('marketplace-listings', [MarketplaceListingController::class, 'index']);
-    Route::get('user-listing',[MarketplaceListingController::class, 'listing']);
+    Route::get('user-listing', [MarketplaceListingController::class, 'listing']);
     Route::post('marketplace-listings', [MarketplaceListingController::class, 'store']);
     Route::get('marketplace-listings/{marketplace_listing}', [MarketplaceListingController::class, 'show']);
     Route::put('marketplace-listings/{marketplace_listing}', [MarketplaceListingController::class, 'update']);
@@ -249,9 +252,15 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/marketplace-listings/{listingId}/boost', [BoostController::class, 'boostMarketplaceListing']);
     Route::put('/campaigns/{campaignId}/update-listing', [BoostController::class, 'updateBoostedMarketplace']);
     Route::put('/campaigns/{campaignId}/update-post', [BoostController::class, 'updateBoostedPost']);
-
-// Pause/Resume
-Route::post('/campaigns/{campaignId}/toggle-status', [BoostController::class, 'toggleCampaignStatus']);
+    Route::get('/live-streams/{id}/gifts', [LiveStreamGiftController::class, 'index']);
+    Route::post('/live-streams/{id}/gifts', [LiveStreamGiftController::class, 'store']);
+    Route::post('/live-streams/{id}/join', [LiveStreamAudienceController::class, 'join']);
+    Route::post('/live-streams/{id}/leave', [LiveStreamAudienceController::class, 'leave']);
+    Route::get('/live-streams/{id}/audience', [LiveStreamAudienceController::class, 'currentAudience']);
+    // Pause/Resume
+    Route::get('/live-streams/{id}/chats', [LiveStreamChatController::class, 'index']);
+    Route::post('/live-streams/{id}/chats', [LiveStreamChatController::class, 'store']);
+    Route::post('/campaigns/{campaignId}/toggle-status', [BoostController::class, 'toggleCampaignStatus']);
 
 
     Route::post('/start-daily-call', [DailyCallController::class, 'startCall']);
