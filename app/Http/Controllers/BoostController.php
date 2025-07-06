@@ -63,7 +63,6 @@ class BoostController extends Controller
     {
         $user = Auth::user();
         $campaign = AdCampaign::where('user_id', $user->id)
-            ->where('post_id', '!=', null)
             ->findOrFail($campaignId);
 
         $payload = $request->validate([
@@ -86,7 +85,6 @@ class BoostController extends Controller
     {
         $user = Auth::user();
         $campaign = AdCampaign::where('user_id', $user->id)
-            ->where('marketplace_listing_id', '!=', null)
             ->findOrFail($campaignId);
 
         $payload = $request->validate([
