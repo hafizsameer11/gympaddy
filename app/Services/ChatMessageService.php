@@ -110,14 +110,17 @@ class ChatMessageService
                 ]);
             }
         }
-
+        //check if has image
+        
         // ✅ 4. Create the message
         $message = ChatMessage::create([
             'conversation_id' => $conversation->id,
             'sender_id' => $senderId,
             'receiver_id' => $receiverId,
             'message' => $validated['message'],
+            'image'=>$validated['imagePath']
         ]);
+   
 
         $message->load(['sender', 'receiver', 'conversation']);
 

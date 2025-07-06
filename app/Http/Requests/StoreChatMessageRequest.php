@@ -21,6 +21,7 @@ class StoreChatMessageRequest extends FormRequest
             'message' => 'required|string',
             'listing_id' => 'nullable|integer|exists:marketplace_listings,id',
             'conversation_id' => 'nullable|integer|exists:conversations,id',
+            'image'=>'nullable'
         ];
     }
 

@@ -14,6 +14,7 @@ class ChatMessage extends Model
         'sender_id',
         'receiver_id',
         'message',
+        'image',
         'read_at',
     ];
 
