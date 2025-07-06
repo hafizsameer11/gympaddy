@@ -226,12 +226,12 @@ class AdCampaignService
     }
     public function updatePostBoost(AdCampaign $campaign, array $payload)
 {
-    if ($campaign->type !== 'boost_post') {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Invalid campaign type.',
-        ], 422);
-    }
+    // if ($campaign->type !== 'boost_post') {
+    //     return response()->json([
+    //         'status' => 'error',
+    //         'message' => 'Invalid campaign type.',
+    //     ], 422);
+    // }
 
     $campaign->update([
         'name'         => $payload['name'] ?? $campaign->name,
@@ -256,12 +256,12 @@ class AdCampaignService
 }
 public function updateMarketplaceBoost(AdCampaign $campaign, array $payload)
 {
-    if ($campaign->type !== 'boost_listing') {
-        return response()->json([
-            'status' => 'error',
-            'message' => 'Invalid campaign type.',
-        ], 422);
-    }
+    // if ($campaign->type !== 'boost_listing') {
+    //     return response()->json([
+    //         'status' => 'error',
+    //         'message' => 'Invalid campaign type.',
+    //     ], 422);
+    // }
 
     $campaign->update([
         'name'         => $payload['name'] ?? $campaign->name,
