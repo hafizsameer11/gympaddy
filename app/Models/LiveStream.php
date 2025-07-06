@@ -15,4 +15,7 @@ class LiveStream extends Model
         'title',
         'is_active',
     ];
+    public function user(){
+        return $this->belongsTo(User::class);
+    }
 }
