@@ -54,9 +54,9 @@ class ChatMessageController extends Controller
     {
         $data = $request->validated();
         $data['sender_id'] = Auth::id();
-               $validated['imagePath']= null;
+               $data['imagePath']= null;
     if ($request->hasFile('image')) {
-        $validated['imagePath']= $request->file('image')->store('chat_images', 'public');
+        $data['imagePath']= $request->file('image')->store('chat_images', 'public');
     }
         return $this->chatMessageService->store($data);
     }
