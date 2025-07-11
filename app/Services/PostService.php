@@ -37,9 +37,9 @@ class PostService
 
     public function show($user, Post $post)
     {
-        if ($post->user_id !== $user->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
-        }
+        // if ($post->user_id !== $user->id) {
+        //     return response()->json(['message' => 'Unauthorized'], 403);
+        // }
         return $post->load(['user', 'comments', 'likes','media'])->loadCount('allComments');
     }
 
