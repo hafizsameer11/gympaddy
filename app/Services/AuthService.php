@@ -73,7 +73,7 @@ class AuthService
         $wallet=Wallet::create([
             'user_id'=>$user->id
         ]);
-        $otp=PasswordOtp::create([
+        $otp=PasswordOtp::generateOtp([
             'email'=>$validated['email']
         ]);
         $token = $user->createToken('auth_token')->plainTextToken;
