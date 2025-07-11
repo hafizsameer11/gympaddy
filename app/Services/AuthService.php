@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use App\Models\User;
 use App\Models\PasswordOtp;
+use App\Models\Wallet;
 use Illuminate\Support\Facades\Password;
 
 class AuthService
@@ -69,11 +70,19 @@ class AuthService
             'password' => Hash::make($validated['password']),
             'profile_picture' => $validated['profile_picture'],
         ]);
+        $wallet=Wallet::create([
+            'user_id'=>$user->id
+        ]);
+        $otp=PasswordOtp::create([
+            'email'=>$validated['email']
+        ]);
         $token = $user->createToken('auth_token')->plainTextToken;
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
             'user' => $user,
+            'otp'=>$otp,
+            'wallet'=>$wallet
         ]);
     }
 
