@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AdCampaign;
 use App\Models\MarketplaceListing;
 use App\Models\Post;
+use Illuminate\Support\Facades\Auth;
 
 class AdCampaignService
 {
@@ -14,8 +15,10 @@ class AdCampaignService
     }
  public function getBoostedCampaigns()
 {
-    return AdCampaign::with(['adable', 'user'])
+    $user=Auth::user();
+        return AdCampaign::with(['adable', 'user'])
         ->orderBy('created_at', 'desc')
+        ->where('user_id',$user->id)
         ->get()
         ->map(function ($campaign) {
             $adable = $campaign->adable;
