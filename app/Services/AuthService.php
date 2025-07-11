@@ -70,19 +70,24 @@ class AuthService
             'password' => Hash::make($validated['password']),
             'profile_picture' => $validated['profile_picture'],
         ]);
-        $wallet=Wallet::create([
-            'user_id'=>$user->id
+        $wallet = Wallet::create([
+            'user_id' => $user->id
         ]);
-        $otp=PasswordOtp::generateOtp([
-            'email'=>$validated['email']
-        ]);
+        $otp = PasswordOtp::generateOtp(
+            $validated['email']
+        );
+        Mail::raw(" OTP is: {$otp->otp}\n\nThis OTP will expire in 10 minutes.", function ($message) use ($validated) {
+            $message->to($validated['email'])
+                ->subject('Email verification OTP');
+        });
+
         $token = $user->createToken('auth_token')->plainTextToken;
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
             'user' => $user,
-            'otp'=>$otp,
-            'wallet'=>$wallet
+            'otp' => $otp,
+            'wallet' => $wallet
         ]);
     }
 
