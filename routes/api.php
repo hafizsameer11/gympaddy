@@ -33,6 +33,7 @@ use App\Http\Controllers\DailyCallController;
 use App\Http\Controllers\LiveStreamAudienceController;
 use App\Http\Controllers\LiveStreamChatController;
 use App\Http\Controllers\LiveStreamGiftController;
+use App\Http\Controllers\MinuteController;
 use App\Http\Controllers\StoryController;
 use App\Http\Controllers\StreamCallController;
 use Illuminate\Http\Request;
@@ -258,7 +259,6 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/live-streams/{id}/join', [LiveStreamAudienceController::class, 'join']);
     Route::post('/live-streams/{id}/leave', [LiveStreamAudienceController::class, 'leave']);
     Route::get('/live-streams/{id}/audience', [LiveStreamAudienceController::class, 'currentAudience']);
-    Route::get('/live-streams/end/{channel_name}', [LiveStreamAudienceController::class, 'endLive']);
     // Pause/Resume
 
     Route::get('/live-streams/{id}/chats', [LiveStreamChatController::class, 'index']);
@@ -273,6 +273,8 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/stream-start-call', [StreamCallController::class, 'startCall']);
     Route::post('/stream-join-call', [StreamCallController::class, 'joinCall']);
     Route::post('/set-fcm-token', [PersonalAccessTokenController::class, 'setfcmToken']);
+    Route::get('/minutes', [MinuteController::class, 'getMinutes']);
+    Route::post('/minutes/purchase', [MinuteController::class, 'purchaseMinute']);
 });
 
 // Agora video/voice call endpoints
@@ -304,3 +306,4 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     });
 });
 Route::get('video-call/token', [VideoCallController::class, 'getToken']);
+Route::get('/live-streams/end/{channel_name}', [LiveStreamAudienceController::class, 'endLive']);
