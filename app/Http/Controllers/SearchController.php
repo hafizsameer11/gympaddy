@@ -13,7 +13,7 @@ class SearchController extends Controller
     $query = $request->input('q');
 
     // Search users
-    $users = Userr::where('username', 'like', "%{$query}%")
+    $users = User::where('username', 'like', "%{$query}%")
         // ->select('id', 'username', 'profile_picture_url')
         ->limit(20)
         ->get();
