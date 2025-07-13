@@ -34,6 +34,7 @@ use App\Http\Controllers\LiveStreamAudienceController;
 use App\Http\Controllers\LiveStreamChatController;
 use App\Http\Controllers\LiveStreamGiftController;
 use App\Http\Controllers\MinuteController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StoryController;
 use App\Http\Controllers\StreamCallController;
 use Illuminate\Http\Request;
@@ -276,6 +277,8 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::get('/minutes', [MinuteController::class, 'getMinutes']);
     Route::post('/minutes/purchase', [MinuteController::class, 'purchaseMinute']);
     Route::post('/top-up',[WalletController::class,'topupp']);
+    Route::get('/search', [SearchController::class, 'search']);
+
 });
 
 // Agora video/voice call endpoints
