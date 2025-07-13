@@ -42,7 +42,7 @@ class StreamCallController extends Controller
             ['user_id' => $caller->id],
             ['token' => $token]
         );
-        $caller = \App\Models\User::find($request->caller_id);
+        $caller = \App\Models\User::find($caller->id);
         $receiver = \App\Models\User::find($request->receiver_id);
 
         $title = "Incoming " . ucfirst($request->call_type) . " Call";
