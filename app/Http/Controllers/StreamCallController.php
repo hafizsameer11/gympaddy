@@ -18,7 +18,7 @@ class StreamCallController extends Controller
         $this->stream = $stream;
     }
 
-    public function startCall(Request $request,PushNotificationService $pushService)
+    public function startCall(Request $request, PushNotificationService $pushService)
     {
         $request->validate([
             'receiver_id' => 'required|exists:users,id',
@@ -32,7 +32,7 @@ class StreamCallController extends Controller
             'caller_id' => $caller->id,
             'receiver_id' => $request->receiver_id,
             'call_type' => $request->call_type,
-            'status' => 'pending',
+            'status' => 'initiated',
             'callId' => $callId,
         ]);
         $token = $this->stream->createToken($caller->id);
@@ -42,24 +42,24 @@ class StreamCallController extends Controller
             ['user_id' => $caller->id],
             ['token' => $token]
         );
-         $caller = \App\Models\User::find($request->caller_id);
-    $receiver = \App\Models\User::find($request->receiver_id);
+        $caller = \App\Models\User::find($request->caller_id);
+        $receiver = \App\Models\User::find($request->receiver_id);
 
-    $title = "Incoming " . ucfirst($request->call_type) . " Call";
-    $body = "{$caller->name} is calling you...";
+        $title = "Incoming " . ucfirst($request->call_type) . " Call";
+        $body = "{$caller->name} is calling you...";
 
-    $pushService->sendToUserById(
-        $receiver->id,
-        $title,
-        $body,
-        data: [
-            'call_id'    => $callId,
-            'call_type'  => $request->call_type,
-            'caller_id'  => $caller->id,
-            'caller_name'=> $caller->name,
-            'type'       => 'incoming_call'
-        ]
-    );
+        $pushService->sendToUserById(
+            $receiver->id,
+            $title,
+            $body,
+            data: [
+                'call_id'    => $callId,
+                'call_type'  => $request->call_type,
+                'caller_id'  => $caller->id,
+                'caller_name' => $caller->name,
+                'type'       => 'incoming_call'
+            ]
+        );
 
         return response()->json([
             'call_id' => $callId,
