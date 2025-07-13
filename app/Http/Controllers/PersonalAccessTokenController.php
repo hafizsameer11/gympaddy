@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\PersonalAccessToken;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class PersonalAccessTokenController extends Controller
 {
@@ -51,5 +54,16 @@ class PersonalAccessTokenController extends Controller
         $token = PersonalAccessToken::findOrFail($id);
         $token->delete();
         return response()->json(['message' => 'Deleted']);
+    }
+
+    public function setfcmToken(Request $request){
+        $userId=Auth::user()->id;
+        Log::info('FCM TOKEN SET'.$request->fcmToken);
+        $fcmToken=$request->fcmToken;
+        $user=User::where('id',$userId)->first();
+        $user->fcmToken=$fcmToken;
+        $user->save();
+        return response()->json(['status'=>'success','message'=>'fcm token set successfulky'],200);
+        
     }
 }

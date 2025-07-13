@@ -34,6 +34,7 @@ use App\Http\Controllers\LiveStreamAudienceController;
 use App\Http\Controllers\LiveStreamChatController;
 use App\Http\Controllers\LiveStreamGiftController;
 use App\Http\Controllers\StoryController;
+use App\Http\Controllers\StreamCallController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
@@ -266,6 +267,10 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/start-daily-call', [DailyCallController::class, 'startCall']);
     Route::get('/user/incoming-daily-call', [DailyCallController::class, 'incomingCall']);
     Route::post('/end-daily-call', [DailyCallController::class, 'endCall']);
+
+    Route::post('/stream-start-call', [StreamCallController::class, 'startCall']);
+    Route::post('/stream-join-call', [StreamCallController::class, 'joinCall']);
+    Route::post('/set-fcm-token',[PersonalAccessTokenController::class, 'setfcmToken']);
 });
 
 // Agora video/voice call endpoints
