@@ -96,9 +96,10 @@ class StreamCallController extends Controller
         );
 
         // Optionally update status to "accepted"
-        $call->update(['status' => 'accepted']);
+        $call->update(['status' => 'continue']);
 
         return response()->json([
+            'user_id' => $userId, // 👈 Add this
             'token' => $token,
             'call_id' => $call->callId,
             'caller_id' => $call->caller_id,
