@@ -8,10 +8,20 @@ use App\Http\Requests\UpdateWalletRequest;
 use App\Http\Requests\TopupWalletRequest;
 use App\Http\Requests\WithdrawWalletRequest;
 use App\Services\WalletService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class WalletController extends Controller
 {
     protected WalletService $walletService;
+    public function  topupp(Request $request){
+        $amount=$request->amount;
+        $user=Auth::user();
+        $wallet=Wallet::where('user_id',$user->id)->first();
+        $wallet->balance=$wallet->balance+$amount;
+        $wallet->save();
+        return response()->json(['status'=>'success'],200);
+    }
 
     public function __construct(WalletService $walletService)
     {

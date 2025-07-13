@@ -275,6 +275,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/set-fcm-token', [PersonalAccessTokenController::class, 'setfcmToken']);
     Route::get('/minutes', [MinuteController::class, 'getMinutes']);
     Route::post('/minutes/purchase', [MinuteController::class, 'purchaseMinute']);
+    Route::post('/top-up',[WalletController::class,'topupp']);
 });
 
 // Agora video/voice call endpoints
