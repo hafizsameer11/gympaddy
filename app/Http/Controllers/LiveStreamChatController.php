@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\LiveStreamChat;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class LiveStreamChatController extends Controller
 {
@@ -27,6 +28,7 @@ class LiveStreamChatController extends Controller
         $request->validate([
             'message' => 'required|string|max:1000',
         ]);
+        Log::info("reques object is for messaginfg on live stream",$request->all());
 
         $chat = LiveStreamChat::create([
             'user_id' => auth()->id(),
