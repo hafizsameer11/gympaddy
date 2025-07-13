@@ -29,7 +29,7 @@ class StreamCallController extends Controller
         $callId = uniqid('call_');
         $caller = Auth::user();
         $call = StreamCall::create([
-            'caller_id' => $$caller->id,
+            'caller_id' => $caller->id,
             'receiver_id' => $request->receiver_id,
             'call_type' => $request->call_type,
             'status' => 'pending',
