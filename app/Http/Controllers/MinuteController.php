@@ -30,7 +30,7 @@ class MinuteController extends Controller
         $purchaseMinuteHistory = MinutePurchaseHistory::create([
             'user_id' => $user->id,
             'amount' => $minute,
-            'minute' => $minute
+            'minutes' => $minute
 
         ]);
         $wallet = Wallet::where('user_id', $user->id)->first();
