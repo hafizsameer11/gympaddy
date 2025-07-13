@@ -56,7 +56,7 @@ class StreamCallController extends Controller
                 'call_id'    => $callId,
                 'call_type'  => $request->call_type,
                 'caller_id'  => $caller->id,
-                'caller_name' => $caller->name,
+                'caller_name' => $caller->fullname,
                 'type'       => 'incoming_call'
             ]
         );
@@ -67,7 +67,7 @@ class StreamCallController extends Controller
             'call_type' => $request->call_type,
             'receiver_id' => $request->receiver_id,
             'status' => 'pending',
-            'user_id'=>$caller->id
+            'user_id' => $caller->id
         ]);
     }
     public function joinCall(Request $request)

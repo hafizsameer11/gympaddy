@@ -52,7 +52,9 @@ class FirebaseNotificationService
             "Authorization: Bearer {$accessToken['access_token']}",
             'Content-Type: application/json',
         ];
-
+        $data = collect($data)->mapWithKeys(function ($value, $key) {
+            return [$key => is_null($value) ? '' : (string) $value];
+        })->toArray();
         $payload = [
             "message" => [
                 "token" => $fcmToken,
