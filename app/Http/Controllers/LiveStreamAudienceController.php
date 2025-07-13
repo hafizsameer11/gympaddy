@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\LiveStream;
 use App\Models\LiveStreamAudience;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class LiveStreamAudienceController extends Controller
 {
@@ -62,6 +63,7 @@ class LiveStreamAudienceController extends Controller
         if ($liveStream) {
             $liveStream->update(['is_active' => false]);
         }
+        Log::info('live streaiming edning',[$liveStream]);
         return response()->json([
             'status' => true,
             'message' => 'Live stream ended'
