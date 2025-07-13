@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LiveStream;
 use App\Models\LiveStreamAudience;
 use Illuminate\Http\Request;
 
 class LiveStreamAudienceController extends Controller
 {
-      public function join(Request $request, $liveStreamId)
+    public function join(Request $request, $liveStreamId)
     {
         $userId = auth()->id();
 
@@ -53,6 +54,17 @@ class LiveStreamAudienceController extends Controller
         return response()->json([
             'status' => true,
             'data' => $audience
+        ]);
+    }
+    public function endLive($channel_name)
+    {
+        $liveStream = LiveStream::where('channel_name', $channel_name)->first();
+        if ($liveStream) {
+            $liveStream->update(['is_active' => false]);
+        }
+        return response()->json([
+            'status' => true,
+            'message' => 'Live stream ended'
         ]);
     }
 }

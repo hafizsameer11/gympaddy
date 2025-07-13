@@ -258,7 +258,9 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/live-streams/{id}/join', [LiveStreamAudienceController::class, 'join']);
     Route::post('/live-streams/{id}/leave', [LiveStreamAudienceController::class, 'leave']);
     Route::get('/live-streams/{id}/audience', [LiveStreamAudienceController::class, 'currentAudience']);
+    Route::get('/live-streams/end/{channel_name}', [LiveStreamAudienceController::class, 'endLive']);
     // Pause/Resume
+
     Route::get('/live-streams/{id}/chats', [LiveStreamChatController::class, 'index']);
     Route::post('/live-streams/{id}/chats', [LiveStreamChatController::class, 'store']);
     Route::post('/campaigns/{campaignId}/toggle-status', [BoostController::class, 'toggleCampaignStatus']);
@@ -270,7 +272,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 
     Route::post('/stream-start-call', [StreamCallController::class, 'startCall']);
     Route::post('/stream-join-call', [StreamCallController::class, 'joinCall']);
-    Route::post('/set-fcm-token',[PersonalAccessTokenController::class, 'setfcmToken']);
+    Route::post('/set-fcm-token', [PersonalAccessTokenController::class, 'setfcmToken']);
 });
 
 // Agora video/voice call endpoints
