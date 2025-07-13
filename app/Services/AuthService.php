@@ -8,10 +8,16 @@ use Illuminate\Support\Facades\Mail;
 use App\Models\User;
 use App\Models\PasswordOtp;
 use App\Models\Wallet;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Password;
 
 class AuthService
 {
+    protected $pushNotificationService;
+    public function __construct(PushNotificationService $pushNotificationService)
+    {
+        $this->pushNotificationService = $pushNotificationService;
+    }
     public function login($validated)
     {
         $credentials = [
@@ -20,6 +26,9 @@ class AuthService
         ];
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
+            $notification=  $this->pushNotificationService->sendToUserById($user->id, "You lgged in", "You Logged In successfully");
+            Log::info("Notification send".$notification);
+
             $token = $user->createToken('auth_token')->plainTextToken;
             return response()->json([
                 'access_token' => $token,
