@@ -8,7 +8,7 @@ class LiveStreamService
 {
     public function index()
     {
-        return LiveStream::with('user')->latest()->get();
+        return LiveStream::with('user')->where('is_active',1)->latest()->get();
     }
 
     public function store($user, $validated)
