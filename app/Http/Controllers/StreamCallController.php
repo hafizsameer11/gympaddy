@@ -66,7 +66,8 @@ class StreamCallController extends Controller
             'token' => $token,
             'call_type' => $request->call_type,
             'receiver_id' => $request->receiver_id,
-            'status' => 'pending'
+            'status' => 'pending',
+            'user_id'=>$caller->id
         ]);
     }
     public function joinCall(Request $request)
