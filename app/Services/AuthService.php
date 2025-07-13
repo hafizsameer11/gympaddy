@@ -27,7 +27,7 @@ class AuthService
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
             $notification=  $this->pushNotificationService->sendToUserById($user->id, "You lgged in", "You Logged In successfully");
-            Log::info("Notification send".$notification);
+            Log::info("Notification send",[$notification]);
 
             $token = $user->createToken('auth_token')->plainTextToken;
             return response()->json([
