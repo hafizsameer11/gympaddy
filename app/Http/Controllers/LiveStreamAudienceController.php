@@ -59,7 +59,7 @@ class LiveStreamAudienceController extends Controller
     }
     public function endLive($channel_name)
     {
-        $liveStream = LiveStream::where('channel_name', $channel_name)->first();
+        $liveStream = LiveStream::where('agora_channel', $channel_name)->first();
         if ($liveStream) {
             $liveStream->update(['is_active' => false]);
         }
