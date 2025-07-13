@@ -67,8 +67,7 @@ class FirebaseNotificationService
                 ], $data)
             ],
         ];
-
-
+        Log::info("Payload is", $payload);
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, str_replace('{projectId}', $this->projectId, $this->fcmUrl));
         curl_setopt($ch, CURLOPT_POST, true);
