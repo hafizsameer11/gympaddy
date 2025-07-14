@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 
 class StoryController extends Controller
 {
-        public function store(Request $request)
+    public function store(Request $request)
     {
         $request->validate([
             'media' => 'required|file',
@@ -33,35 +33,32 @@ class StoryController extends Controller
             'story' => $story
         ], 201);
     }
-   public function getStories()
-{
-    $user = Auth::user();
+    public function getStories()
+    {
+        $user = Auth::user();
 
-    $followingIds = Follow::where('follower_id', $user->id)
-        ->pluck('followed_id')
-        ->toArray();
+        // All active stories
+        $stories = Story::where('expires_at', '>', now())
+            ->where('user_id', '!=', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->with('user')
+            ->get();
 
-    // Get stories of followed users
-    $stories = Story::whereIn('user_id', $followingIds)
-        ->where('expires_at', '>', now())
-        ->orderBy('created_at', 'desc')
-        ->with('user')
-        ->get();
+        // My own active stories
+        $myStories = Story::where('user_id', $user->id)
+            ->where('expires_at', '>', now())
+            ->orderBy('created_at', 'desc')
+            ->with('user')
+            ->get();
 
-    // Get current user's active stories
-    $myStories = Story::where('user_id', $user->id)
-        ->where('expires_at', '>', now())
-        ->orderBy('created_at', 'desc')
-        ->with('user')
-        ->get();
+        return response()->json([
+            'status' => 'success',
+            'message' => 'All active stories retrieved successfully',
+            'stories' => $stories,
+            'my_stories' => $myStories,
+        ], 200);
+    }
 
-    return response()->json([
-        'status' => 'success',
-        'message' => 'Stories retrieved successfully',
-        'stories' => $stories,
-        'my_stories' => $myStories,
-    ], 200);
-}
 
     public function viewStory($storyId)
     {
