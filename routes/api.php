@@ -278,6 +278,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/minutes/purchase', [MinuteController::class, 'purchaseMinute']);
     Route::post('/top-up',[WalletController::class,'topupp']);
     Route::get('/search', [SearchController::class, 'search']);
+    Route::get('/get-business-status',[BusinessController::class,'getBusinessStatus']);
 
 });
 

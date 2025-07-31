@@ -71,4 +71,7 @@ class BusinessController extends Controller
     {
         return $this->businessService->destroy($business);
     }
+    public function getBusinessStatus() {
+        return $this->businessService->getBusinessStatus();
+    }
 }

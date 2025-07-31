@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Business;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
 class BusinessService
@@ -71,6 +72,39 @@ class BusinessService
             ], 500);
         }
     }
+public function getBusinessStatus()
+{
+    $userId = Auth::id();
+    $business = Business::where('user_id', $userId)->first();
+
+    if ($business) {
+        $isApproved = $business->status === 'approved';
+
+        return response()->json([
+            'status' => 'success',
+            'code' => 200,
+            'message' => 'Business status retrieved successfully.',
+            'data' => [
+                'isApproved' => $isApproved,
+                'status' => $business->status,
+                'business' => $business
+            ]
+        ], 200);
+    }
+
+    // No business found – treat as not approved, but not an error
+    return response()->json([
+        'status' => 'success',
+        'code' => 200,
+        'message' => 'No business account found.',
+        'data' => [
+            'isApproved' => false,
+            'status' => 'not_found',
+            'business' => null
+        ]
+    ], 200);
+}
+
 
     public function destroy(Business $business)
     {
