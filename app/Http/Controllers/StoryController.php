@@ -10,29 +10,33 @@ use Illuminate\Support\Facades\Storage;
 
 class StoryController extends Controller
 {
-    public function store(Request $request)
-    {
-        $request->validate([
-            'media' => 'required|file',
-            'media_type' => 'required',
-            'caption' => 'nullable|string',
-        ]);
+public function store(Request $request)
+{
+    $request->validate([
+        'media' => 'required|file',
+        'media_type' => 'required|string',
+        'caption' => 'nullable|string',
+        'music_title' => 'nullable|string',
+        'music_url' => 'nullable|url',
+    ]);
 
-        $path = $request->file('media')->store('stories', 'public');
+    $path = $request->file('media')->store('stories', 'public');
 
-        $story = Story::create([
-            'user_id' => auth()->id(),
-            'media_url' => Storage::url($path),
-            'media_type' => $request->media_type,
-            'caption' => $request->caption,
-            'expires_at' => now()->addHours(24),
-        ]);
+    $story = Story::create([
+        'user_id' => auth()->id(),
+        'media_url' => Storage::url($path),
+        'media_type' => $request->media_type,
+        'caption' => $request->caption,
+        'music_title' => $request->music_title,
+        'music_url' => $request->music_url,
+        'expires_at' => now()->addHours(24),
+    ]);
 
-        return response()->json([
-            'message' => 'Story uploaded successfully',
-            'story' => $story
-        ], 201);
-    }
+    return response()->json([
+        'message' => 'Story uploaded successfully',
+        'story' => $story
+    ], 201);
+}
     public function getStories()
     {
         $user = Auth::user();

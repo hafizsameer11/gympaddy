@@ -7,14 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class Story extends Model
 {
-    use HasFactory;
-      protected $fillable = [
-        'user_id',
-        'media_url',
-        'media_type',
-        'caption',
-        'expires_at',
-    ];
+    use HasFactory;protected $fillable = [
+    'user_id',
+    'media_url',
+    'media_type',
+    'caption',
+    'music_title',
+    'music_url',
+    'expires_at',
+];
 
     /**
      * A story belongs to a user.
