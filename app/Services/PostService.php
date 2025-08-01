@@ -95,7 +95,7 @@ private function handleMediaUploads(Post $post, array $mediaFiles)
             $image = $manager
                 ->read($file)
                 ->scale(width: 1080) // resize proportionally
-                ->encode(new JpegEncoder(quality: 75)); // compress
+                ->encode(new JpegEncoder(quality: 55)); // compress
 
             Storage::disk('public')->put($filePath, (string) $image);
             $finalPath = $filePath;
