@@ -14,13 +14,18 @@ class LiveStreamChat extends Model
       'message',
       'created_at',
       'updated_at',
-      'type'
+      'type',
+         'reply_to_id',
    ];
 
    public function user()
    {
       return $this->belongsTo(User::class);
    }
+   public function replyTo()
+{
+    return $this->belongsTo(LiveStreamChat::class, 'reply_to_id');
+}
    public function live()
    {
       return $this->belongsTo(LiveStream::class, 'live_stream_id');
