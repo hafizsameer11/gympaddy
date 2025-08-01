@@ -5,10 +5,13 @@ namespace App\Services;
 use App\Models\Post;
 use App\Models\PostMedia;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
+// use Illuminate\Support\Facades\Storage;
 use FFMpeg\FFMpeg;
 use FFMpeg\Format\Video\X264;
-
+    use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\Encoders\JpegEncoder;
+use Illuminate\Support\Facades\Storage;
 class PostService
 {
 public function index()
@@ -69,47 +72,59 @@ public function index()
         }
     }
 
-    private function handleMediaUploads(Post $post, array $mediaFiles)
-    {
-        $order = 0;
 
-        foreach ($mediaFiles as $file) {
-            $mediaType = str_starts_with($file->getMimeType(), 'image/') ? 'image' : 'video';
-            $fileName = time() . '_' . $order . '_' . $file->getClientOriginalName();
-            $filePath = "posts/{$post->id}/{$fileName}";
 
-            // Create directory if it doesn't exist
-            Storage::disk('public')->makeDirectory("posts/{$post->id}");
+private function handleMediaUploads(Post $post, array $mediaFiles)
+{
+    $order = 0;
+    $manager = new ImageManager(new Driver());
 
-            if ($mediaType === 'image') {
-                // Store image as-is
-                $storedPath = $file->storeAs("posts/{$post->id}", $fileName, 'public');
-                $finalPath = $storedPath;
-                $fileSize = $file->getSize();
-            } else {
-                // Handle video compression
-                $tempPath = $file->storeAs('temp', $fileName, 'public');
-                $finalPath = $this->compressVideo($tempPath, $filePath);
-                $fileSize = Storage::disk('public')->size($finalPath);
+    foreach ($mediaFiles as $file) {
+        $isImage = str_starts_with($file->getMimeType(), 'image/');
+        $mediaType = $isImage ? 'image' : 'video';
 
-                // Clean up temp file
-                Storage::disk('public')->delete($tempPath);
-            }
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $fileName = time() . '_' . $order . '_' . str()->slug($originalName) . ($isImage ? '.jpg' : '.' . $file->getClientOriginalExtension());
+        $filePath = "posts/{$post->id}/{$fileName}";
 
-            // Create PostMedia record
-            PostMedia::create([
-                'post_id' => $post->id,
-                'file_path' => $finalPath,
-                'file_name' => $fileName,
-                'media_type' => $mediaType,
-                'mime_type' => $file->getMimeType(),
-                'file_size' => $fileSize,
-                'order' => $order,
-            ]);
+        // Ensure the post directory exists
+        Storage::disk('public')->makeDirectory("posts/{$post->id}");
 
-            $order++;
+        if ($isImage) {
+            // ✅ Compress image using Intervention v3
+            $image = $manager
+                ->read($file)
+                ->scale(width: 1080) // resize proportionally
+                ->encode(new JpegEncoder(quality: 75)); // compress
+
+            Storage::disk('public')->put($filePath, (string) $image);
+            $finalPath = $filePath;
+            $fileSize = Storage::disk('public')->size($finalPath);
+        } else {
+            // ⏯️ Handle video upload/compression
+            $tempPath = $file->storeAs('temp', $fileName, 'public');
+            $finalPath = $this->compressVideo($tempPath, $filePath);
+            $fileSize = Storage::disk('public')->size($finalPath);
+
+            // Clean up temp file
+            Storage::disk('public')->delete($tempPath);
         }
+
+        // Save media record
+        PostMedia::create([
+            'post_id'    => $post->id,
+            'file_path'  => $finalPath,
+            'file_name'  => $fileName,
+            'media_type' => $mediaType,
+            'mime_type'  => $file->getMimeType(),
+            'file_size'  => $fileSize,
+            'order'      => $order,
+        ]);
+
+        $order++;
     }
+}
+
 
     private function compressVideo(string $inputPath, string $outputPath): string
     {
