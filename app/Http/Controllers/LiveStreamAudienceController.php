@@ -57,6 +57,17 @@ class LiveStreamAudienceController extends Controller
             'data' => $audience
         ]);
     }
+    public function currentAudienceCount($id){
+        $audience = LiveStreamAudience::where('live_stream_id', $id)
+        ->whereNull('left_at')
+        ->count();
+        return response()->json([
+            'status' => true,
+            'data' => $audience,
+            'count'=>$audience
+        ]);
+
+    }
     public function endLive($channel_name)
     {
         $liveStream = LiveStream::where('agora_channel', $channel_name)->first();

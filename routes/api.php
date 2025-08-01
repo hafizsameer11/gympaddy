@@ -260,6 +260,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::post('/live-streams/{id}/join', [LiveStreamAudienceController::class, 'join']);
     Route::post('/live-streams/{id}/leave', [LiveStreamAudienceController::class, 'leave']);
     Route::get('/live-streams/{id}/audience', [LiveStreamAudienceController::class, 'currentAudience']);
+    Route::get('/live-streams/{id}/audience-count', [LiveStreamAudienceController::class, 'currentAudienceCount']);
     // Pause/Resume
 
     Route::get('/live-streams/{id}/chats', [LiveStreamChatController::class, 'index']);
