@@ -11,13 +11,17 @@ use FFMpeg\Format\Video\X264;
 
 class PostService
 {
-    public function index()
-    {
-        return Post::with(['user', 'comments', 'likes', 'media'])
-            ->withCount('allComments')
-            ->latest() // optional: newest posts first
-            ->paginate(20);
-    }
+public function index()
+{
+    $perPage = request()->get('limit', 4); // default to 4 instead of 20
+
+    return Post::with(['user', 'comments', 'likes', 'media'])
+        ->withCount('allComments')
+        ->orderByDesc('created_at')
+        ->paginate($perPage);
+}
+
+
 
     public function store($user, $validated)
     {

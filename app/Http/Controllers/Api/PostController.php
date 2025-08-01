@@ -38,6 +38,7 @@ class PostController extends Controller
         return $this->postService->store($user, $validated);
     }
 
+
     public function show(Post $post)
     {
         $user = Auth::user();
