@@ -34,6 +34,7 @@ class LiveStreamChatController extends Controller
             'user_id' => auth()->id(),
             'live_stream_id' => $id,
             'message' => $request->message,
+            'type' => $request->type
         ]);
 
         return response()->json([
