@@ -7,28 +7,51 @@ use App\Models\Story;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Drivers\Gd\Driver;
+use Intervention\Image\Drivers\Gd\Encoders\JpegEncoder;
+use Intervention\Image\ImageManager;
 
 class StoryController extends Controller
 {
+//    use Intervention\Image\ImageManager;
+// use Intervention\Image\Drivers\Gd\Driver;
+
 public function store(Request $request)
 {
     $request->validate([
         'media' => 'required|file',
         'media_type' => 'required|string',
         'caption' => 'nullable|string',
-        'music_title' => 'nullable|string',
-        'music_url' => 'nullable|url',
     ]);
 
-    $path = $request->file('media')->store('stories', 'public');
+    $file = $request->file('media');
+    $mediaType = $request->media_type;
+    $userId = auth()->id();
+    $filename = ''; // Initialize filename
 
-    $story = Story::create([
-        'user_id' => auth()->id(),
-        'media_url' => Storage::url($path),
-        'media_type' => $request->media_type,
+    if ($mediaType === 'image') {
+        // Define a unique name for the image
+        $filename = 'stories/' . uniqid() . '.jpg';
+        
+        $manager = new ImageManager(new Driver());
+
+        $image = $manager->read($file)
+            ->resize(1080, null, fn ($constraint) => $constraint->aspectRatio()->upsize())
+            ->encode(new \Intervention\Image\Encoders\JpegEncoder(quality: 55));
+
+       Storage::disk('public')->put($filename, (string) $image);
+
+    } else { // For video or other file types
+        // Let Laravel's store method generate a unique name inside the 'stories' directory
+        $filename = $file->store('stories', 'public');
+    }
+
+    $story =Story::create([
+        'user_id' => $userId,
+        // Use Storage::url() to get the public URL for the stored file
+        'media_url' =>Storage::url($filename),
+        'media_type' => $mediaType,
         'caption' => $request->caption,
-        'music_title' => $request->music_title,
-        'music_url' => $request->music_url,
         'expires_at' => now()->addHours(24),
     ]);
 
@@ -37,6 +60,7 @@ public function store(Request $request)
         'story' => $story
     ], 201);
 }
+
     public function getStories()
     {
         $user = Auth::user();
