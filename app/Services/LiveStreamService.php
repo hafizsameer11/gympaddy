@@ -10,7 +10,7 @@ class LiveStreamService
 {
     $liveStreams = LiveStream::with([
         'user',
-        'user.latestPost.media' // 💡 nested eager loading
+        'user.latestImagePost.media' // 💡 nested eager loading
     ])
     ->where('is_active', 1)
     ->latest()
