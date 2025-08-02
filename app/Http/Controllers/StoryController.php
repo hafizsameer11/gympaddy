@@ -22,37 +22,36 @@ public function store(Request $request)
         'media' => 'required|file',
         'media_type' => 'required|string',
         'caption' => 'nullable|string',
+        'music_url' => 'nullable|url',           // ✅ optional
+        'music_title' => 'nullable|string',      // ✅ optional
     ]);
 
     $file = $request->file('media');
     $mediaType = $request->media_type;
     $userId = auth()->id();
-    $filename = ''; // Initialize filename
+    $filename = '';
 
     if ($mediaType === 'image') {
-        // Define a unique name for the image
         $filename = 'stories/' . uniqid() . '.jpg';
-        
         $manager = new ImageManager(new Driver());
 
         $image = $manager->read($file)
             ->resize(1080, null, fn ($constraint) => $constraint->aspectRatio()->upsize())
             ->encode(new \Intervention\Image\Encoders\JpegEncoder(quality: 55));
 
-       Storage::disk('public')->put($filename, (string) $image);
-
-    } else { // For video or other file types
-        // Let Laravel's store method generate a unique name inside the 'stories' directory
+        Storage::disk('public')->put($filename, (string) $image);
+    } else {
         $filename = $file->store('stories', 'public');
     }
 
-    $story =Story::create([
+    $story = Story::create([
         'user_id' => $userId,
-        // Use Storage::url() to get the public URL for the stored file
-        'media_url' =>Storage::url($filename),
+        'media_url' => Storage::url($filename),
         'media_type' => $mediaType,
         'caption' => $request->caption,
         'expires_at' => now()->addHours(24),
+        'music_url' => $request->music_url,         // ✅ Save music_url
+        'music_title' => $request->music_title,     // ✅ Save music_title
     ]);
 
     return response()->json([
@@ -60,6 +59,7 @@ public function store(Request $request)
         'story' => $story
     ], 201);
 }
+
 
     public function getStories()
     {

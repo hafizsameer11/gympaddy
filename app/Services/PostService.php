@@ -26,7 +26,20 @@ public function index()
 
 
 
+/*************  ✨ Windsurf Command ⭐  *************/
+/**
+ * Store a newly created post in the database.
+ *
+ * This function creates a new post for the given user with the validated data.
+ * If media files are included in the validated data, they are handled and uploaded.
+ * Returns a JSON response with the created post including its relationships.
+ *
+ * @param \App\Models\User $user The authenticated user creating the post.
+ * @param array $validated The validated data for creating the post.
+ * @return \Illuminate\Http\JsonResponse The JSON response containing the created post.
+ */
 
+/*******  5b83242a-f104-4bb0-b748-9cf964453e73  *******/
     public function store($user, $validated)
     {
         $post = Post::create([
