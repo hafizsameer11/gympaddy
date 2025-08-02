@@ -114,6 +114,14 @@ class User extends Authenticatable
         return $this->hasMany(Status::class);
     }
 
+public function latestImagePost()
+{
+    return $this->hasOne(Post::class)
+        ->whereHas('media', function ($q) {
+            $q->where('media_type', 'image');
+        })
+        ->latest(); // or orderByDesc('created_at')
+}
 
     // ...add other relationships as needed...
 }
