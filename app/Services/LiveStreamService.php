@@ -6,10 +6,18 @@ use App\Models\LiveStream;
 
 class LiveStreamService
 {
-    public function index()
-    {
-        return LiveStream::with('user')->where('is_active',1)->latest()->get();
-    }
+  public function index()
+{
+    $liveStreams = LiveStream::with([
+        'user',
+        'user.latestPost.media' // 💡 nested eager loading
+    ])
+    ->where('is_active', 1)
+    ->latest()
+    ->get();
+
+    return response()->json($liveStreams);
+}
 
     public function store($user, $validated)
     {
