@@ -18,11 +18,12 @@ public function index()
 {
     $perPage = request()->get('limit', 4); // default to 4 instead of 20
 
-    return Post::with(['user', 'comments', 'likes', 'media'])
+    return Post::with(['user', 'comments', 'likes.user', 'media'])
         ->withCount('allComments')
         ->orderByDesc('created_at')
         ->paginate($perPage);
 }
+
 
 
 
