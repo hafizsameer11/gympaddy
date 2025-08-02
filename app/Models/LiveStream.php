@@ -18,4 +18,7 @@ class LiveStream extends Model
     public function user(){
         return $this->belongsTo(User::class);
     }
+    public function audiences(){
+        return $this->hasMany(LiveStreamAudience::class, 'live_stream_id');
+    }
 }
