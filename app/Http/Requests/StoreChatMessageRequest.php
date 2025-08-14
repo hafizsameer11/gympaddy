@@ -18,7 +18,7 @@ class StoreChatMessageRequest extends FormRequest
     {
         return [
             'receiver_id' => 'required_without:listing_id|integer|exists:users,id',
-            'message' => 'required|string',
+            'message' => 'nullable|string',
             'listing_id' => 'nullable|integer|exists:marketplace_listings,id',
             'conversation_id' => 'nullable|integer|exists:conversations,id',
             'image'=>'nullable'
