@@ -234,7 +234,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::put('chat-messages/{chat_message}', [ChatMessageController::class, 'update']);
     Route::delete('chat-messages/{chat_message}', [ChatMessageController::class, 'destroy']);
     Route::get('chat-conversations', [\App\Http\Controllers\ChatMessageController::class, 'conversations']);
-
+    Route::get('/unread-count', [ChatMessageController::class, 'unreadCount']);
     // Tickets
     Route::get('tickets', [TicketController::class, 'index']);
     Route::post('tickets', [TicketController::class, 'store']);

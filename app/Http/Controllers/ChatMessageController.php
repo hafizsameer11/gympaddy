@@ -37,6 +37,12 @@ class ChatMessageController extends Controller
 
         return $this->chatMessageService->index($params);
     }
+    public function unreadCount(){
+        $user=Auth::user();
+        //get the read of the current user
+        $UnreaadCOunt=ChatMessage::where('receiver_id',$user->id)->where('read',0)->count();
+        return response()->json(['data'=>$UnreaadCOunt]);
+    }
 
 
     /**
