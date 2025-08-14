@@ -20,6 +20,11 @@ class Conversation extends Model
         return $this->hasMany(ChatMessage::class);
     }
 
+public function latestMessage()
+{
+    return $this->hasOne(ChatMessage::class)->latestOfMany('created_at');
+}
+
     public function user1()
     {
         return $this->belongsTo(User::class, 'user1_id');
