@@ -7,7 +7,6 @@ use App\Models\Conversation;
 use App\Models\User;
 use App\Models\MarketplaceListing;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class ChatMessageService
 {
@@ -154,73 +153,56 @@ class ChatMessageService
         return response()->json(['message' => 'Deleted']);
     }
 
-  
+    public function listConversations()
+    {
+        $user = auth()->user();
 
-public function listConversations()
-{
-    $user = auth()->user();
-
-    // Fetch conversations the user is part of
-    $conversations = \App\Models\Conversation::query()
-        ->where(function ($q) use ($user) {
+        $conversations = Conversation::where(function ($q) use ($user) {
             $q->where('user1_id', $user->id)
-              ->orWhere('user2_id', $user->id);
+                ->orWhere('user2_id', $user->id);
         })
-        // Bring the counterpart users and the single latest message
-        ->with([
-            'user1:id,username,fullname,profile_picture',
-            'user2:id,username,fullname,profile_picture',
-            'latestMessage:id,conversation_id,message,sender_id,receiver_id,created_at',
-        ])
-        // Compute latest message time to sort by last activity (if no messages, this will be null)
-        ->withMax('messages', 'created_at') // alias: messages_max_created_at
-        // Sort: first by last message time desc, then by conversation updated_at desc as fallback
-        ->orderByDesc('messages_max_created_at')
-        ->orderByDesc('updated_at')
-        ->get()
-        ->map(function ($conv) use ($user) {
-            // figure out the "other user"
-            $otherUser = $conv->user1_id === $user->id ? $conv->user2 : $conv->user1;
+            ->with([
+                'user1:id,username,fullname,profile_picture',
+                'user2:id,username,fullname,profile_picture',
+                'messages' => function ($q) {
+                    $q->latest()->limit(1);
+                }
+            ])
+            ->latest('updated_at')
+            ->get()
+            ->map(function ($conv) use ($user) {
+                // Identify the other user in the conversation
+                $otherUser = $conv->user1_id === $user->id ? $conv->user2 : $conv->user1;
 
-            // build profile picture url (keeps absolute URLs intact)
-            $pp = $otherUser?->profile_picture;
-            $profileUrl = $pp
-                ? (Str::startsWith($pp, ['http://', 'https://']) ? $pp : asset('storage/' . ltrim($pp, '/')))
-                : null;
+                return [
+                    'conversation_id' => $conv->id,
+                    'type' => $conv->type,
+                    'other_user' => [
+                        'id' => $otherUser->id,
+                        'username' => $otherUser->username,
+                        'fullname' => $otherUser->fullname,
+                        'profile_picture_url' => $otherUser->profile_picture
+                            ? asset('storage/' . $otherUser->profile_picture)
+                            : null,
+                    ],
+                    'last_message' => $conv->messages->first() ? [
+                        'id' => $conv->messages->first()->id,
+                        'message' => $conv->messages->first()->message,
+                        'sender_id' => $conv->messages->first()->sender_id,
+                        'receiver_id' => $conv->messages->first()->receiver_id,
+                        'created_at' => $conv->messages->first()->created_at,
+                    ] : null,
+                    'created_at' => $conv->created_at,
+                    'updated_at' => $conv->updated_at,
+                ];
+            });
 
-            // last message payload if exists
-            $lm = $conv->latestMessage;
-
-            return [
-                'conversation_id' => $conv->id,
-                'type'            => $conv->type,
-                'other_user'      => [
-                    'id'                   => $otherUser?->id,
-                    'username'             => $otherUser?->username,
-                    'fullname'             => $otherUser?->fullname,
-                    'profile_picture_url'  => $profileUrl,
-                ],
-                'last_message'    => $lm ? [
-                    'id'          => $lm->id,
-                    'message'     => $lm->message,
-                    'sender_id'   => $lm->sender_id,
-                    'receiver_id' => $lm->receiver_id,
-                    'created_at'  => $lm->created_at,
-                ] : null,
-                'created_at'      => $conv->created_at,
-                'updated_at'      => $conv->updated_at,
-                // helpful for client-side sorting/debug (optional)
-                'last_activity_at'=> $conv->messages_max_created_at ?? $conv->updated_at,
-            ];
-        });
-
-    return response()->json([
-        'status'        => 'success',
-        'code'          => 200,
-        'conversations' => $conversations,
-    ]);
-}
-
+        return response()->json([
+            'status' => 'success',
+            'code' => 200,
+            'conversations' => $conversations,
+        ]);
+    }
 
 
     private function findConversation($user1, $user2)
