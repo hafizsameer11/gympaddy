@@ -16,6 +16,7 @@ class ChatMessage extends Model
         'message',
         'image',
         'read_at',
+        'read'
     ];
 
     public function sender()

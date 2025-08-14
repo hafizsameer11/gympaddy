@@ -161,27 +161,28 @@ class ChatMessageService
             $q->where('user1_id', $user->id)
               ->orWhere('user2_id', $user->id);
         })
-        // keep your existing eager loads
         ->with([
             'user1:id,username,fullname,profile_picture',
             'user2:id,username,fullname,profile_picture',
             'messages' => function ($q) {
-                // fetch only the latest message for display
-                $q->select('id','conversation_id','message','sender_id','receiver_id','created_at')
+                $q->select('id','conversation_id','message','sender_id','receiver_id','read','created_at')
                   ->latest()
                   ->limit(1);
             },
         ])
-        // add a sortable aggregate: latest (max) message created_at per conversation
-        ->withMax('messages', 'created_at') // alias: messages_max_created_at
-        // order: conversations with messages first, then by latest message desc
-        ->orderByRaw('messages_max_created_at IS NULL') // false(0)=has message -> first; true(1)=nulls last
+        ->withMax('messages', 'created_at')
+        ->orderByRaw('messages_max_created_at IS NULL')
         ->orderByDesc('messages_max_created_at')
-        // optional fallback if two convos have same max timestamp or null
         ->orderByDesc('updated_at')
         ->get()
         ->map(function ($conv) use ($user) {
             $otherUser = $conv->user1_id === $user->id ? $conv->user2 : $conv->user1;
+
+            // count unread messages for this user in this conversation
+            $unreadCount = ChatMessage::where('conversation_id', $conv->id)
+                ->where('receiver_id', $user->id)
+                ->where('read', false) // assuming read is boolean
+                ->count();
 
             return [
                 'conversation_id' => $conv->id,
@@ -195,15 +196,17 @@ class ChatMessageService
                         : null,
                 ],
                 'last_message'    => $conv->messages->first() ? [
-                    'id'          => $conv->messages->first()->id,
-                    'message'     => $conv->messages->first()->message,
-                    'sender_id'   => $conv->messages->first()->sender_id,
-                    'receiver_id' => $conv->messages->first()->receiver_id,
-                    'created_at'  => $conv->messages->first()->created_at,
-                ] : null,
+                    'id'            => $conv->messages->first()->id,
+                    'message'       => $conv->messages->first()->message,
+                    'sender_id'     => $conv->messages->first()->sender_id,
+                    'receiver_id'   => $conv->messages->first()->receiver_id,
+                    'created_at'    => $conv->messages->first()->created_at,
+                    'unread_count'  => $unreadCount,
+                ] : [
+                    'unread_count'  => $unreadCount
+                ],
                 'created_at'      => $conv->created_at,
                 'updated_at'      => $conv->updated_at,
-                // helpful for debugging/sorting confirmation (optional)
                 'last_message_at' => $conv->messages_max_created_at,
             ];
         });
@@ -214,6 +217,7 @@ class ChatMessageService
         'conversations' => $conversations,
     ]);
 }
+
 
 
 
