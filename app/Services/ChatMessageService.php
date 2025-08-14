@@ -153,56 +153,68 @@ class ChatMessageService
         return response()->json(['message' => 'Deleted']);
     }
 
-    public function listConversations()
-    {
-        $user = auth()->user();
+ public function listConversations()
+{
+    $user = auth()->user();
 
-        $conversations = Conversation::where(function ($q) use ($user) {
+    $conversations = Conversation::where(function ($q) use ($user) {
             $q->where('user1_id', $user->id)
-                ->orWhere('user2_id', $user->id);
+              ->orWhere('user2_id', $user->id);
         })
-            ->with([
-                'user1:id,username,fullname,profile_picture',
-                'user2:id,username,fullname,profile_picture',
-                'messages' => function ($q) {
-                    $q->latest()->limit(1);
-                }
-            ])
-            ->latest('updated_at')
-            ->get()
-            ->map(function ($conv) use ($user) {
-                // Identify the other user in the conversation
-                $otherUser = $conv->user1_id === $user->id ? $conv->user2 : $conv->user1;
+        // keep your existing eager loads
+        ->with([
+            'user1:id,username,fullname,profile_picture',
+            'user2:id,username,fullname,profile_picture',
+            'messages' => function ($q) {
+                // fetch only the latest message for display
+                $q->select('id','conversation_id','message','sender_id','receiver_id','created_at')
+                  ->latest()
+                  ->limit(1);
+            },
+        ])
+        // add a sortable aggregate: latest (max) message created_at per conversation
+        ->withMax('messages', 'created_at') // alias: messages_max_created_at
+        // order: conversations with messages first, then by latest message desc
+        ->orderByRaw('messages_max_created_at IS NULL') // false(0)=has message -> first; true(1)=nulls last
+        ->orderByDesc('messages_max_created_at')
+        // optional fallback if two convos have same max timestamp or null
+        ->orderByDesc('updated_at')
+        ->get()
+        ->map(function ($conv) use ($user) {
+            $otherUser = $conv->user1_id === $user->id ? $conv->user2 : $conv->user1;
 
-                return [
-                    'conversation_id' => $conv->id,
-                    'type' => $conv->type,
-                    'other_user' => [
-                        'id' => $otherUser->id,
-                        'username' => $otherUser->username,
-                        'fullname' => $otherUser->fullname,
-                        'profile_picture_url' => $otherUser->profile_picture
-                            ? asset('storage/' . $otherUser->profile_picture)
-                            : null,
-                    ],
-                    'last_message' => $conv->messages->first() ? [
-                        'id' => $conv->messages->first()->id,
-                        'message' => $conv->messages->first()->message,
-                        'sender_id' => $conv->messages->first()->sender_id,
-                        'receiver_id' => $conv->messages->first()->receiver_id,
-                        'created_at' => $conv->messages->first()->created_at,
-                    ] : null,
-                    'created_at' => $conv->created_at,
-                    'updated_at' => $conv->updated_at,
-                ];
-            });
+            return [
+                'conversation_id' => $conv->id,
+                'type'            => $conv->type,
+                'other_user'      => [
+                    'id'                  => $otherUser->id,
+                    'username'            => $otherUser->username,
+                    'fullname'            => $otherUser->fullname,
+                    'profile_picture_url' => $otherUser->profile_picture
+                        ? asset('storage/' . ltrim($otherUser->profile_picture, '/'))
+                        : null,
+                ],
+                'last_message'    => $conv->messages->first() ? [
+                    'id'          => $conv->messages->first()->id,
+                    'message'     => $conv->messages->first()->message,
+                    'sender_id'   => $conv->messages->first()->sender_id,
+                    'receiver_id' => $conv->messages->first()->receiver_id,
+                    'created_at'  => $conv->messages->first()->created_at,
+                ] : null,
+                'created_at'      => $conv->created_at,
+                'updated_at'      => $conv->updated_at,
+                // helpful for debugging/sorting confirmation (optional)
+                'last_message_at' => $conv->messages_max_created_at,
+            ];
+        });
 
-        return response()->json([
-            'status' => 'success',
-            'code' => 200,
-            'conversations' => $conversations,
-        ]);
-    }
+    return response()->json([
+        'status'        => 'success',
+        'code'          => 200,
+        'conversations' => $conversations,
+    ]);
+}
+
 
 
     private function findConversation($user1, $user2)
