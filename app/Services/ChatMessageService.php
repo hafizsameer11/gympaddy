@@ -118,7 +118,7 @@ class ChatMessageService
             'conversation_id' => $conversation->id,
             'sender_id' => $senderId,
             'receiver_id' => $receiverId,
-            'message' => $validated['message'],
+            'message' => $validated['message'] ?? 'Sent an image',
             'image'=>$validated['imagePath']
         ]);
    
