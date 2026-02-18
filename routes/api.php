@@ -281,6 +281,9 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::get('/search', [SearchController::class, 'search']);
     Route::get('/get-business-status',[BusinessController::class,'getBusinessStatus']);
 
+    // Account deletion
+    Route::delete('/delete-account', [UserController::class, 'deleteAccount']);
+
 });
 
 // Agora video/voice call endpoints
