@@ -92,6 +92,11 @@ Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('auth/verify-otp', [AuthController::class, 'verifyOtp']);
 Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
 
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('auth/logout', [AuthController::class, 'logout']);
+    Route::post('auth/refresh', [AuthController::class, 'refresh']);
+});
+
 Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     // User Profile
 
@@ -316,3 +321,6 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
 });
 Route::get('video-call/token', [VideoCallController::class, 'getToken']);
 Route::get('/live-streams/end/{channel_name}', [LiveStreamAudienceController::class, 'endLive']);
+
+// Import admin routes
+require __DIR__.'/admin.php';

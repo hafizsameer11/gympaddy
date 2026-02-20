@@ -50,4 +50,47 @@ class AuthController extends Controller
     {
         return $this->authService->resetPassword($request->validated());
     }
+
+    public function logout(\Illuminate\Http\Request $request)
+    {
+        try {
+            $request->user()->currentAccessToken()->delete();
+            return response()->json([
+                'success' => true,
+                'message' => 'Logged out successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'SERVER_ERROR',
+                    'message' => $e->getMessage()
+                ]
+            ], 500);
+        }
+    }
+
+    public function refresh(\Illuminate\Http\Request $request)
+    {
+        try {
+            $user = $request->user();
+            $user->currentAccessToken()->delete();
+            $token = $user->createToken('auth_token')->plainTextToken;
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'token' => $token
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'SERVER_ERROR',
+                    'message' => $e->getMessage()
+                ]
+            ], 500);
+        }
+    }
 }
