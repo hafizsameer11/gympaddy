@@ -143,7 +143,12 @@ class MarketController extends Controller
             if ($request->has('title'))       $updateData['title']       = $request->title;
             if ($request->has('description')) $updateData['description'] = $request->description;
             if ($request->has('price'))       $updateData['price']       = $request->price;
-            if ($request->has('category'))    $updateData['category_id'] = $request->category;
+            if ($request->has('category')) {
+                $category = \App\Models\MarketplaceCategory::where('name', $request->category)->first();
+                if ($category) {
+                    $updateData['category_id'] = $category->id;
+                }
+            }
             if ($request->has('location'))    $updateData['location']    = $request->location;
             if ($request->has('status'))      $updateData['status']      = $request->status;
 
@@ -189,7 +194,7 @@ class MarketController extends Controller
         try {
             $totalListings = MarketplaceListing::count();
             $activeListings = MarketplaceListing::where('status', 'active')->count();
-            $boostedListings = MarketplaceListing::where('is_boosted', true)->count();
+            $boostedListings = MarketplaceListing::where('is_featured', true)->count();
             $totalRevenue = MarketplaceListing::where('status', 'sold')->sum('price');
 
             return response()->json([

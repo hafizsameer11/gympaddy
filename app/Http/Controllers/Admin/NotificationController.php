@@ -9,20 +9,38 @@ use Illuminate\Http\Request;
 
 class NotificationController extends Controller
 {
+    private function formatNotification(Notification $n): array
+    {
+        return [
+            'id'         => (string) $n->id,
+            'title'      => $n->title ?? '',
+            'message'    => $n->body ?? '',
+            'type'       => $n->type ?? 'broadcast',
+            'status'     => $n->status ?? 'sent',
+            'is_read'    => (bool) $n->is_read,
+            'created_at' => $n->created_at?->toIso8601String() ?? '',
+            'timestamp'  => $n->created_at?->format('Y-m-d h:i A') ?? '',
+        ];
+    }
+
     public function getAllNotifications(Request $request)
     {
         try {
             $query = Notification::query();
 
-            if ($request->has('type') && $request->type !== 'all') {
-                $query->where('type', $request->type);
+            // When fetching broadcast history (admin-sent), return only broadcast records
+            if ($request->boolean('broadcast')) {
+                $query->whereNull('user_id')->where('type', 'broadcast');
+            } else {
+                if ($request->has('type') && $request->type !== 'all') {
+                    $query->where('type', $request->type);
+                }
+                if ($request->has('status') && $request->status !== 'all') {
+                    $query->where('status', $request->status);
+                }
             }
 
-            if ($request->has('status') && $request->status !== 'all') {
-                $query->where('status', $request->status);
-            }
-
-            $page = $request->get('page', 1);
+            $page  = $request->get('page', 1);
             $limit = $request->get('limit', 20);
 
             $notifications = $query->orderBy('created_at', 'desc')->paginate($limit, ['*'], 'page', $page);
@@ -30,11 +48,11 @@ class NotificationController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'notifications' => $notifications->items(),
+                    'notifications' => collect($notifications->items())->map(fn($n) => $this->formatNotification($n)),
                     'pagination' => [
                         'currentPage' => $notifications->currentPage(),
-                        'totalPages' => $notifications->lastPage(),
-                        'totalItems' => $notifications->total(),
+                        'totalPages'  => $notifications->lastPage(),
+                        'totalItems'  => $notifications->total(),
                     ]
                 ]
             ]);
@@ -50,7 +68,7 @@ class NotificationController extends Controller
             if (!$notification) {
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Notification not found']], 404);
             }
-            return response()->json(['success' => true, 'data' => $notification]);
+            return response()->json(['success' => true, 'data' => $this->formatNotification($notification)]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
         }
@@ -60,31 +78,39 @@ class NotificationController extends Controller
     {
         try {
             $validated = $request->validate([
-                'title' => 'required|string',
-                'message' => 'required|string',
-                'type' => 'required|string',
+                'title'       => 'required|string',
+                'message'     => 'required|string',
+                'type'        => 'nullable|string',
                 'targetUsers' => 'array',
             ]);
 
+            $type        = $validated['type'] ?? 'broadcast';
             $targetUsers = $validated['targetUsers'] ?? [];
-            
+
+            // Store one broadcast record for history
+            $notification = Notification::create([
+                'user_id' => null,
+                'title'   => $validated['title'],
+                'body'    => $validated['message'],
+                'type'    => $type,
+                'status'  => 'sent',
+            ]);
+
+            // Also send to specific target users if provided
             foreach ($targetUsers as $userId) {
                 Notification::create([
                     'user_id' => $userId,
-                    'title' => $validated['title'],
-                    'message' => $validated['message'],
-                    'type' => $validated['type'],
-                    'status' => 'sent',
+                    'title'   => $validated['title'],
+                    'body'    => $validated['message'],
+                    'type'    => $type,
+                    'status'  => 'sent',
                 ]);
             }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Notification sent successfully',
-                'data' => [
-                    'id' => 'notif_' . time(),
-                    'recipients' => count($targetUsers)
-                ]
+                'data'    => $this->formatNotification($notification),
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
@@ -95,40 +121,42 @@ class NotificationController extends Controller
     {
         try {
             $validated = $request->validate([
-                'title' => 'required|string',
-                'message' => 'required|string',
-                'type' => 'required|string',
+                'title'    => 'required|string',
+                'message'  => 'required|string',
+                'type'     => 'nullable|string',
                 'userType' => 'required|string',
             ]);
 
-            $query = User::query();
-            
-            if ($validated['userType'] === 'subscribers') {
-                $query->where('subscription_status', 'active');
-            } elseif ($validated['userType'] === 'active') {
-                $query->where('status', 'online');
-            }
+            $type = $validated['type'] ?? 'broadcast';
 
-            $users = $query->get();
-
-            foreach ($users as $user) {
-                Notification::create([
-                    'user_id' => $user->id,
-                    'title' => $validated['title'],
-                    'message' => $validated['message'],
-                    'type' => $validated['type'],
-                    'status' => 'sent',
-                ]);
-            }
+            // Store one broadcast record for history
+            $notification = Notification::create([
+                'user_id' => null,
+                'title'   => $validated['title'],
+                'body'    => $validated['message'],
+                'type'    => $type,
+                'status'  => 'sent',
+            ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Bulk notification sent successfully',
-                'data' => [
-                    'id' => 'notif_' . time(),
-                    'recipients' => $users->count()
-                ]
+                'message' => 'Notification sent successfully',
+                'data'    => $this->formatNotification($notification),
             ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
+        }
+    }
+
+    public function deleteNotification($id)
+    {
+        try {
+            $notification = Notification::find($id);
+            if (!$notification) {
+                return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Notification not found']], 404);
+            }
+            $notification->delete();
+            return response()->json(['success' => true, 'message' => 'Notification deleted successfully']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
         }
