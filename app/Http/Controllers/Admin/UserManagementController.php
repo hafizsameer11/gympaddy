@@ -139,6 +139,7 @@ class UserManagementController extends Controller
                 'gender' => 'required|string',
                 'age' => 'required|integer',
                 'password' => 'required|string|min:6',
+                'profile_picture' => 'nullable|image|max:5120',
             ]);
 
             $user = \App\Models\User::create([
@@ -158,6 +159,8 @@ class UserManagementController extends Controller
             }
 
             return response()->json(['success' => true, 'message' => 'User created successfully', 'data' => ['id' => $user->id, 'username' => $user->username]]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['success' => false, 'message' => collect($e->errors())->flatten()->first(), 'errors' => $e->errors()], 422);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
         }
@@ -294,12 +297,33 @@ class UserManagementController extends Controller
     }
     public function getUserChats($id)
     {
-        $conVersations = Conversation::where('user1_id', $id)
-            ->orWhere('user2_id', $id)
-            ->with(['user1:id,username,fullname,profile_picture', 'user2:id,username,fullname,profile_picture', 'messages'])
-            ->get();
+        try {
+            $conversations = Conversation::where('user1_id', $id)
+                ->orWhere('user2_id', $id)
+                ->with(['user1:id,username,fullname,profile_picture', 'user2:id,username,fullname,profile_picture', 'messages'])
+                ->orderBy('updated_at', 'desc')
+                ->get()
+                ->map(function ($conv) use ($id) {
+                    $otherUser = $conv->user1_id == $id ? $conv->user2 : $conv->user1;
+                    $lastMessage = $conv->messages->sortByDesc('created_at')->first();
 
-        return response()->json(['message' => 'User chats retrieved successfully', 'data' => $conVersations, 'status' => 'success']);
+                    return [
+                        'id'              => $conv->id,
+                        'otherUserId'     => $otherUser->id ?? null,
+                        'otherUserName'   => $otherUser->fullname ?? 'Unknown',
+                        'otherUsername'   => $otherUser->username ?? '',
+                        'otherUserAvatar' => $otherUser->profile_picture ?? null,
+                        'lastMessage'     => $lastMessage->message ?? $lastMessage->content ?? '',
+                        'lastMessageAt'   => $lastMessage ? $lastMessage->created_at->toIso8601String() : $conv->updated_at->toIso8601String(),
+                        'messageCount'    => $conv->messages->count(),
+                        'date'            => $conv->updated_at->format('d/m/y'),
+                    ];
+                });
+
+            return response()->json(['success' => true, 'data' => $conversations]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
+        }
     }
     public function getUserTransactions($id)
     {

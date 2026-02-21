@@ -12,44 +12,59 @@ class AdsController extends Controller
     {
         $adable = $ad->adable;
         $user   = $ad->user;
+        $isPost = $ad->adable_type === \App\Models\Post::class;
 
-        // Aggregate insights
         $impressions = $ad->insights()->sum('impressions') ?? 0;
         $clicks      = $ad->insights()->sum('clicks') ?? 0;
 
-        // Resolve image: prefer media_url on the campaign, then the adable's image/images
-        $image = $ad->media_url ?? null;
+        // Resolve image: prefer non-empty media_url on campaign, then adable fields
+        $image = !empty($ad->media_url) ? $ad->media_url : null;
         if (!$image && $adable) {
             if (!empty($adable->images)) {
                 $raw = is_string($adable->images) ? json_decode($adable->images, true) : $adable->images;
                 $image = is_array($raw) ? ($raw[0] ?? null) : null;
             }
-            $image = $image ?? $adable->image ?? $adable->photo ?? null;
+            if (!$image) {
+                $image = !empty($adable->media_url) ? $adable->media_url : null;
+            }
+            if (!$image) {
+                $image = $adable->image ?? $adable->photo ?? null;
+            }
         }
 
-        // Resolve price from the adable (marketplace listing)
-        $price = $adable ? ('₦' . number_format((float)($adable->price ?? 0), 2)) : '—';
+        // Price only makes sense for marketplace listings
+        if ($isPost) {
+            $price = '—';
+        } else {
+            $price = $adable && isset($adable->price)
+                ? '₦' . number_format((float) $adable->price, 2)
+                : '—';
+        }
 
-        // Resolve listing status separately from ad status
-        $listingStatus = $adable->status ?? 'active';
+        $listingStatus = $adable ? ($adable->status ?? ($isPost ? 'published' : 'active')) : '—';
 
         return [
             'id'            => $ad->id,
             'image'         => $image,
             'name'          => $user->fullname ?? $ad->name ?? 'Unknown',
+            'username'      => $user->username ?? null,
             'userImage'     => $user->profile_picture ?? null,
-            'location'      => $user->location ?? 'Nigeria',
-            'title'         => $ad->title ?? $adable->title ?? $ad->name ?? '—',
+            'location'      => $ad->location ?? $user->location ?? 'Nigeria',
+            'title'         => $ad->title ?? ($adable ? ($adable->title ?? $ad->name ?? '—') : ($ad->name ?? '—')),
             'price'         => $price,
-            'description'   => $ad->content ?? ($adable ? ($adable->description ?? '') : ''),
-            'category'      => $ad->type ?? ($adable->category ?? '—'),
+            'description'   => $ad->content ?? ($adable ? ($adable->description ?? $adable->content ?? '') : ''),
+            'category'      => $ad->type ?? ($adable ? ($adable->category ?? '—') : '—'),
+            'type'          => $isPost ? 'post' : 'listing',
             'duration'      => $ad->duration ? "{$ad->duration} days" : '—',
-            'date'          => $ad->created_at->format('d/m/y - h:i A'),
+            'date'          => $ad->created_at->format('d/m/y'),
             'dateCreated'   => $ad->created_at->format('d/m/y - h:i A'),
+            'startDate'     => $ad->start_date?->format('d/m/y') ?? '—',
+            'endDate'       => $ad->end_date?->format('d/m/y') ?? '—',
             'listingStatus' => $listingStatus,
             'adStatus'      => $ad->status ?? 'pending',
             'status'        => $ad->status ?? 'pending',
-            'amountSpent'   => '₦' . number_format((float)($ad->budget ?? 0), 2),
+            'budget'        => (float) ($ad->budget ?? 0),
+            'amountSpent'   => '₦' . number_format((float) ($ad->spent ?? $ad->budget ?? 0), 2),
             'boostDuration' => $ad->duration ? "{$ad->duration} days" : '—',
             'impressions'   => (int) $impressions,
             'clicks'        => (int) $clicks,

@@ -16,10 +16,11 @@ class TransactionController extends Controller
             'id'              => $tx->reference ?? (string) $tx->id,
             'transactionId'   => $tx->id,
             'fullName'        => $user->fullname ?? 'Unknown',
+            'username'        => $user->username ?? null,
             'profile_picture' => $user->profile_picture ?? null,
-            'amount'          => number_format((float) $tx->amount, 2),
+            'amount'          => (float) $tx->amount,
             'type'            => $tx->type === 'withdraw' ? 'withdrawal' : $tx->type,
-            'status'          => $tx->status,
+            'status'          => $tx->status ?? 'pending',
             'date'            => $tx->created_at->format('d/m/y - h:i A'),
             'description'     => $tx->meta ?? null,
         ];
@@ -47,30 +48,48 @@ class TransactionController extends Controller
         }
     }
 
+    public function show($id)
+    {
+        try {
+            $tx = Transaction::with(['wallet.user'])->find($id);
+            if (!$tx) {
+                return response()->json([
+                    'success' => false,
+                    'error' => ['code' => 'NOT_FOUND', 'message' => 'Transaction not found']
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $this->formatTransaction($tx),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]
+            ], 500);
+        }
+    }
+
     public function stats()
     {
         try {
-            $totalTransactions = Transaction::count();
-            $totalRevenue = Transaction::where('type', 'topup')
-                ->where('status', 'completed')
-                ->sum('amount');
-            $totalDeposits = Transaction::where('type', 'topup')
-                ->where('status', 'completed')
-                ->sum('amount');
-            $totalWithdrawals = Transaction::where('type', 'withdraw')
-                ->where('status', 'completed')
-                ->sum('amount');
-            $pendingTransactions = Transaction::where('status', 'pending')->count();
+            $totalTransactions    = Transaction::count();
+            $pendingTransactions  = Transaction::where('status', 'pending')->count();
             $completedTransactions = Transaction::where('status', 'completed')->count();
+
+            $totalDeposits    = (float) Transaction::where('type', 'topup')->sum('amount');
+            $totalWithdrawals = (float) Transaction::where('type', 'withdraw')->sum('amount');
+            $totalRevenue     = $totalDeposits - $totalWithdrawals;
 
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'totalTransactions'   => $totalTransactions,
-                    'totalRevenue'        => (float) $totalRevenue,
-                    'totalDeposits'       => (float) $totalDeposits,
-                    'totalWithdrawals'    => (float) $totalWithdrawals,
-                    'pendingTransactions' => $pendingTransactions,
+                    'totalTransactions'     => $totalTransactions,
+                    'totalRevenue'          => $totalRevenue,
+                    'totalDeposits'         => $totalDeposits,
+                    'totalWithdrawals'      => $totalWithdrawals,
+                    'pendingTransactions'   => $pendingTransactions,
                     'completedTransactions' => $completedTransactions,
                 ]
             ]);

@@ -152,7 +152,27 @@ class AnalyticsController extends Controller
     {
         try {
             $period = $request->query('period', '30d');
-            
+            $days = match($period) {
+                '7d' => 7,
+                '30d' => 30,
+                '90d' => 90,
+                '1y' => 365,
+                default => 30
+            };
+
+            $labels = [];
+            $impressionsData = [];
+            $clicksData = [];
+
+            $step = $days > 90 ? 7 : 1;
+            for ($i = $days - 1; $i >= 0; $i -= $step) {
+                $endDate = Carbon::today()->subDays($i);
+                $startDate = $step > 1 ? $endDate->copy()->subDays($step - 1) : $endDate;
+                $labels[] = $step > 1 ? $startDate->format('M d') : $endDate->format('M d');
+                $impressionsData[] = (int) AdCampaign::whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()])->sum('impressions');
+                $clicksData[] = (int) AdCampaign::whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()])->sum('clicks');
+            }
+
             $totalImpressions = AdCampaign::sum('impressions');
             $totalClicks = AdCampaign::sum('clicks');
             $totalSpent = AdCampaign::sum('spent');
@@ -162,16 +182,10 @@ class AnalyticsController extends Controller
                 'success' => true,
                 'data' => [
                     'chartData' => [
-                        'labels' => ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                        'labels' => $labels,
                         'datasets' => [
-                            [
-                                'label' => 'Impressions',
-                                'data' => [50000, 60000, 65000, 75000]
-                            ],
-                            [
-                                'label' => 'Clicks',
-                                'data' => [1500, 1800, 2000, 2200]
-                            ]
+                            ['label' => 'Impressions', 'data' => $impressionsData],
+                            ['label' => 'Clicks', 'data' => $clicksData],
                         ]
                     ],
                     'summary' => [

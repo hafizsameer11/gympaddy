@@ -18,6 +18,7 @@ class MarketplaceListing extends Model
         'price',
         'status', // pending, running, closed
         'media_urls',
+        'is_featured',
     ];
 
     protected $casts = [

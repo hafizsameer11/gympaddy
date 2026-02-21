@@ -8,32 +8,47 @@ use Illuminate\Http\Request;
 
 class VerificationController extends Controller
 {
+    private function formatVerification(Business $business): array
+    {
+        $user = $business->user;
+
+        return [
+            'id'            => 'verify_' . $business->id,
+            'userId'        => $business->user_id,
+            'userName'      => $user->fullname ?? 'Unknown',
+            'userEmail'     => $user->email ?? '',
+            'userPhone'     => $user->phone ?? '',
+            'profilePicture'=> $user->profile_picture ?? null,
+            'username'      => $user->username ?? '',
+            'businessName'  => $business->business_name ?? '',
+            'category'      => $business->category ?? 'Gym',
+            'businessEmail' => $business->business_email ?? '',
+            'businessPhone' => $business->business_phone ?? '',
+            'photo'         => $business->photo ?? null,
+            'status'        => $business->status ?? 'pending',
+            'documents'     => $business->documents ? json_decode($business->documents) : [],
+            'notes'         => $business->notes ?? '',
+            'created_at'    => $business->created_at->format('d/m/y'),
+            'createdAt'     => $business->created_at->toIso8601String(),
+        ];
+    }
+
     public function getAllVerifications(Request $request)
     {
         try {
-            $query = Business::with('user:id,username,fullname,email');
+            $query = Business::with('user:id,username,fullname,email,phone,profile_picture');
 
             if ($request->has('status') && $request->status !== 'all') {
                 $query->where('status', $request->status);
             }
 
-            $page = $request->get('page', 1);
+            $page  = $request->get('page', 1);
             $limit = $request->get('limit', 20);
 
             $verifications = $query->orderBy('created_at', 'desc')->paginate($limit, ['*'], 'page', $page);
 
-            $formattedVerifications = $verifications->getCollection()->map(function ($business) {
-                return [
-                    'id' => 'verify_' . $business->id,
-                    'userId' => $business->user_id,
-                    'userName' => $business->user->fullname ?? 'Unknown',
-                    'businessName' => $business->business_name,
-                    'category' => $business->category ?? 'Gym',
-                    'status' => $business->status ?? 'pending',
-                    'documents' => $business->documents ? json_decode($business->documents) : [],
-                    'createdAt' => $business->created_at->toIso8601String(),
-                ];
-            });
+            $formattedVerifications = $verifications->getCollection()
+                ->map(fn($b) => $this->formatVerification($b));
 
             return response()->json([
                 'success' => true,
@@ -41,8 +56,8 @@ class VerificationController extends Controller
                     'verifications' => $formattedVerifications,
                     'pagination' => [
                         'currentPage' => $verifications->currentPage(),
-                        'totalPages' => $verifications->lastPage(),
-                        'totalItems' => $verifications->total(),
+                        'totalPages'  => $verifications->lastPage(),
+                        'totalItems'  => $verifications->total(),
                     ]
                 ]
             ]);
@@ -55,7 +70,7 @@ class VerificationController extends Controller
     {
         try {
             $businessId = str_replace('verify_', '', $id);
-            $business = Business::with('user:id,username,fullname,email')->find($businessId);
+            $business = Business::with('user:id,username,fullname,email,phone,profile_picture')->find($businessId);
             
             if (!$business) {
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Verification not found']], 404);
@@ -63,18 +78,7 @@ class VerificationController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'id' => 'verify_' . $business->id,
-                    'userId' => $business->user_id,
-                    'userName' => $business->user->fullname ?? 'Unknown',
-                    'userEmail' => $business->user->email ?? '',
-                    'businessName' => $business->business_name,
-                    'category' => $business->category ?? 'Gym',
-                    'status' => $business->status ?? 'pending',
-                    'documents' => $business->documents ? json_decode($business->documents) : [],
-                    'notes' => $business->notes ?? '',
-                    'createdAt' => $business->created_at->toIso8601String(),
-                ]
+                'data' => $this->formatVerification($business),
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
@@ -114,7 +118,7 @@ class VerificationController extends Controller
 
             $business->update([
                 'status' => 'rejected',
-                'rejection_reason' => $request->reason ?? 'Incomplete documentation'
+                'rejected_reason' => $request->reason ?? 'Incomplete documentation'
             ]);
 
             return response()->json(['success' => true, 'message' => 'Verification rejected successfully']);

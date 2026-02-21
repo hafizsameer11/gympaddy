@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\SupportController;
 use App\Http\Controllers\Admin\AdminManagementController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Admin\BusinessController as AdminBusinessController;
+use App\Http\Controllers\Admin\SettingsController;
 
 Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     
@@ -52,12 +53,14 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     // Social Management Endpoints
     Route::prefix('social')->group(function () {
         Route::get('/posts', [SocialController::class, 'getAllPosts']);
-        Route::get('/posts/{id}', [SocialController::class, 'getPostById']);
         Route::get('/posts/user/{userId}', [SocialController::class, 'getUserPosts']);
+        Route::get('/posts/{id}', [SocialController::class, 'getPostById']);
         Route::delete('/posts/{id}', [SocialController::class, 'deletePost']);
         Route::get('/statuses', [SocialController::class, 'getAllStatuses']);
+        Route::get('/statuses/user/{userId}', [SocialController::class, 'getUserStatuses']);
         Route::delete('/statuses/{id}', [SocialController::class, 'deleteStatus']);
         Route::get('/live', [SocialController::class, 'getAllLiveStreams']);
+        Route::get('/live/user/{userId}', [SocialController::class, 'getUserLiveStreams']);
         Route::post('/live/{id}/end', [SocialController::class, 'endLiveStream']);
         Route::get('/stats', [SocialController::class, 'getSocialStats']);
     });
@@ -171,6 +174,12 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
         Route::post('/', [AdminManagementController::class, 'createAdmin']);
         Route::put('/{id}', [AdminManagementController::class, 'updateAdmin']);
         Route::delete('/{id}', [AdminManagementController::class, 'deleteAdmin']);
+    });
+
+    // Settings Endpoints
+    Route::prefix('settings')->group(function () {
+        Route::get('/', [SettingsController::class, 'getSettings']);
+        Route::put('/', [SettingsController::class, 'updateSettings']);
     });
 
     // Existing Business Management Routes (keep for backward compatibility)
