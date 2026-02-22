@@ -69,6 +69,9 @@ class UserManagementController extends Controller
             'gender'         => $user->gender ?? null,
             'age'            => $user->age ?? null,
             'role'           => $user->role ?? 'user',
+            'is_banned'      => (bool) $user->is_banned,
+            'ban_reason'     => $user->ban_reason,
+            'banned_until'   => $user->banned_until?->toIso8601String(),
         ];
     }
 
@@ -221,7 +224,29 @@ class UserManagementController extends Controller
             if (!$user) {
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'User not found']], 404);
             }
-            $user->delete();
+
+            \Illuminate\Support\Facades\DB::beginTransaction();
+
+            try {
+                // Clean up tables without cascade-delete foreign keys
+                \Illuminate\Support\Facades\DB::table('gifts')
+                    ->where('from_user_id', $id)
+                    ->orWhere('to_user_id', $id)
+                    ->delete();
+
+                \Illuminate\Support\Facades\DB::table('transactions')
+                    ->where('related_user_id', $id)
+                    ->delete();
+
+                $user->tokens()->delete();
+                $user->delete();
+
+                \Illuminate\Support\Facades\DB::commit();
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\DB::rollBack();
+                throw $e;
+            }
+
             return response()->json(['success' => true, 'message' => 'User deleted successfully']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
@@ -236,16 +261,37 @@ class UserManagementController extends Controller
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'User not found']], 404);
             }
 
+            $duration = (int) $request->duration;
+            $unit = $request->unit ?? 'days';
+            $bannedUntil = now();
+
+            switch ($unit) {
+                case 'minutes': $bannedUntil = $bannedUntil->addMinutes($duration); break;
+                case 'hours':   $bannedUntil = $bannedUntil->addHours($duration); break;
+                case 'days':    $bannedUntil = $bannedUntil->addDays($duration); break;
+                case 'weeks':   $bannedUntil = $bannedUntil->addWeeks($duration); break;
+                case 'months':  $bannedUntil = $bannedUntil->addMonths($duration); break;
+                case 'years':   $bannedUntil = $bannedUntil->addYears($duration); break;
+                default:        $bannedUntil = $bannedUntil->addDays($duration); break;
+            }
+
             $user->update([
                 'is_banned' => true,
                 'ban_reason' => $request->reason,
-                'ban_duration' => $request->duration,
+                'ban_duration' => $duration . ' ' . $unit,
+                'banned_until' => $bannedUntil,
             ]);
 
-            // Revoke all active tokens to immediately force-logout the user
             $user->tokens()->delete();
 
-            return response()->json(['success' => true, 'message' => 'User banned successfully']);
+            return response()->json([
+                'success' => true,
+                'message' => "User banned for {$duration} {$unit}",
+                'data' => [
+                    'banned_until' => $bannedUntil->toIso8601String(),
+                    'ban_reason' => $request->reason,
+                ],
+            ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
         }
@@ -263,6 +309,7 @@ class UserManagementController extends Controller
                 'is_banned' => false,
                 'ban_reason' => null,
                 'ban_duration' => null,
+                'banned_until' => null,
             ]);
 
             return response()->json(['success' => true, 'message' => 'User unbanned successfully']);

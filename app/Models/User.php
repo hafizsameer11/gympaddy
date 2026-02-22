@@ -25,9 +25,13 @@ class User extends Authenticatable
         'age',
         'gender',
         'password',
-        'role', // 'user' or 'admin'
+        'role',
         'profile_picture',
         'device_token',
+        'is_banned',
+        'ban_reason',
+        'ban_duration',
+        'banned_until',
     ];
 
     /**
@@ -48,6 +52,8 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'is_banned' => 'boolean',
+        'banned_until' => 'datetime',
     ];
 
     public function posts()
