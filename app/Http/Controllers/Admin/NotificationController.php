@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class NotificationController extends Controller
 {
     private function formatNotification(Notification $n): array
     {
+        $user = $n->user;
         return [
             'id'         => (string) $n->id,
             'title'      => $n->title ?? '',
@@ -19,16 +21,25 @@ class NotificationController extends Controller
             'status'     => $n->status ?? 'sent',
             'is_read'    => (bool) $n->is_read,
             'created_at' => $n->created_at?->toIso8601String() ?? '',
+            'time'       => $n->created_at?->diffForHumans() ?? '',
             'timestamp'  => $n->created_at?->format('Y-m-d h:i A') ?? '',
+            'user'       => $user ? [
+                'id'              => $user->id,
+                'username'        => $user->username ?? 'Unknown',
+                'profile_picture' => $user->profile_picture ?? null,
+            ] : [
+                'id'              => null,
+                'username'        => 'System',
+                'profile_picture' => null,
+            ],
         ];
     }
 
     public function getAllNotifications(Request $request)
     {
         try {
-            $query = Notification::query();
+            $query = Notification::with('user:id,username,profile_picture');
 
-            // When fetching broadcast history (admin-sent), return only broadcast records
             if ($request->boolean('broadcast')) {
                 $query->whereNull('user_id')->where('type', 'broadcast');
             } else {
@@ -129,7 +140,6 @@ class NotificationController extends Controller
 
             $type = $validated['type'] ?? 'broadcast';
 
-            // Store one broadcast record for history
             $notification = Notification::create([
                 'user_id' => null,
                 'title'   => $validated['title'],
@@ -138,9 +148,55 @@ class NotificationController extends Controller
                 'status'  => 'sent',
             ]);
 
+            $userQuery = User::query();
+            if ($validated['userType'] === 'active') {
+                $userQuery->where('status', 'online');
+            }
+
+            $userIds = $userQuery->pluck('id');
+
+            $records = $userIds->map(fn($uid) => [
+                'user_id'    => $uid,
+                'title'      => $validated['title'],
+                'body'       => $validated['message'],
+                'type'       => $type,
+                'status'     => 'sent',
+                'is_read'    => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ])->toArray();
+
+            foreach (array_chunk($records, 500) as $chunk) {
+                DB::table('notifications')->insert($chunk);
+            }
+
             return response()->json([
                 'success' => true,
-                'message' => 'Notification sent successfully',
+                'message' => 'Notification sent to ' . count($records) . ' users',
+                'data'    => $this->formatNotification($notification),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
+        }
+    }
+
+    public function updateNotificationStatus(Request $request, $id)
+    {
+        try {
+            $notification = Notification::find($id);
+            if (!$notification) {
+                return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Notification not found']], 404);
+            }
+
+            $validated = $request->validate([
+                'status' => 'required|string|in:sent,reviewed,approved,rejected',
+            ]);
+
+            $notification->update(['status' => $validated['status']]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Notification status updated',
                 'data'    => $this->formatNotification($notification),
             ]);
         } catch (\Exception $e) {

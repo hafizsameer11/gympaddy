@@ -12,7 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Mark live streams as inactive when host closes app without ending stream
+        $schedule->command('livestreams:cleanup')->everyMinute();
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
+use App\Models\Ticket;
 use App\Services\MarketplaceListingService;
 use App\Services\TransactionService;
 use Illuminate\Http\Request;
@@ -174,7 +175,12 @@ class UserManagementController extends Controller
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'User not found']], 404);
             }
 
-            $user->update($request->only(['fullname', 'phone', 'age', 'gender']));
+            $user->update([
+                'fullname' => $request->input('fullName', $user->fullname),
+                'phone'    => $request->input('phoneNumber', $user->phone),
+                'age'      => $request->input('age', $user->age),
+                'gender'   => $request->input('gender', $user->gender),
+            ]);
             return response()->json(['success' => true, 'message' => 'User updated successfully']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
@@ -208,6 +214,9 @@ class UserManagementController extends Controller
                 'ban_reason' => $request->reason,
                 'ban_duration' => $request->duration,
             ]);
+
+            // Revoke all active tokens to immediately force-logout the user
+            $user->tokens()->delete();
 
             return response()->json(['success' => true, 'message' => 'User banned successfully']);
         } catch (\Exception $e) {
@@ -309,6 +318,7 @@ class UserManagementController extends Controller
 
                     return [
                         'id'              => $conv->id,
+                        'type'            => 'chat',
                         'otherUserId'     => $otherUser->id ?? null,
                         'otherUserName'   => $otherUser->fullname ?? 'Unknown',
                         'otherUsername'   => $otherUser->username ?? '',
@@ -320,7 +330,31 @@ class UserManagementController extends Controller
                     ];
                 });
 
-            return response()->json(['success' => true, 'data' => $conversations]);
+            $tickets = Ticket::where('user_id', $id)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($ticket) {
+                    return [
+                        'id'              => 'ticket_' . $ticket->id,
+                        'type'            => 'support',
+                        'otherUserId'     => null,
+                        'otherUserName'   => 'Support Team',
+                        'otherUsername'   => 'support',
+                        'otherUserAvatar' => null,
+                        'lastMessage'     => $ticket->message ?? $ticket->subject ?? '',
+                        'lastMessageAt'   => $ticket->updated_at->toIso8601String(),
+                        'messageCount'    => 1,
+                        'date'            => $ticket->created_at->format('d/m/y'),
+                        'subject'         => $ticket->subject ?? '',
+                        'status'          => $ticket->status ?? 'open',
+                    ];
+                });
+
+            $allChats = $conversations->concat($tickets)
+                ->sortByDesc('lastMessageAt')
+                ->values();
+
+            return response()->json(['success' => true, 'data' => $allChats]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
         }

@@ -68,6 +68,20 @@ class LiveStreamAudienceController extends Controller
         ]);
 
     }
+    public function heartbeat($id)
+    {
+        $stream = LiveStream::where('id', $id)
+            ->where('user_id', auth()->id())
+            ->where('is_active', true)
+            ->first();
+
+        if ($stream) {
+            $stream->update(['last_heartbeat_at' => now()]);
+        }
+
+        return response()->json(['status' => true]);
+    }
+
     public function endLive($channel_name)
     {
         $liveStream = LiveStream::where('agora_channel', $channel_name)->first();

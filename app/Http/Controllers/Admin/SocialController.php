@@ -14,7 +14,7 @@ class SocialController extends Controller
     {
         try {
             $query = Post::with(['user:id,username,fullname,profile_picture', 'media'])
-                ->withCount(['likes', 'allComments as comments_count', 'shares']);
+                ->withCount(['likes', 'allComments as comments_count', 'shares', 'replies as replies_count']);
 
             if ($request->has('type') && $request->type !== 'all') {
                 $query->where('media_type', $request->type);
@@ -49,6 +49,22 @@ class SocialController extends Controller
         }
     }
 
+    private function isStreamLive(LiveStream $stream): bool
+    {
+        if (!$stream->is_active) {
+            return false;
+        }
+
+        $threshold = now()->subMinutes(2);
+
+        if ($stream->last_heartbeat_at) {
+            return $stream->last_heartbeat_at->gt($threshold);
+        }
+
+        // No heartbeat yet — treat as live if stream was recently created or updated
+        return $stream->updated_at->gt($threshold);
+    }
+
     private function formatPost(Post $post): array
     {
         $user = $post->user;
@@ -79,6 +95,7 @@ class SocialController extends Controller
             'likes'          => (int) ($post->likes_count ?? 0),
             'comments'       => (int) ($post->comments_count ?? 0),
             'shares'         => (int) ($post->shares_count ?? 0),
+            'replies'        => (int) ($post->replies_count ?? 0),
             'isBoosted'      => (bool) $post->is_boosted,
             'boostStatus'    => $post->is_boosted ? 'Yes' : 'No',
             'postType'       => $postType,
@@ -91,7 +108,7 @@ class SocialController extends Controller
     {
         try {
             $post = Post::with(['user:id,username,fullname,profile_picture', 'media'])
-                ->withCount(['likes', 'allComments as comments_count', 'shares'])
+                ->withCount(['likes', 'allComments as comments_count', 'shares', 'replies as replies_count'])
                 ->find($id);
             if (!$post) {
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Post not found']], 404);
@@ -111,7 +128,7 @@ class SocialController extends Controller
         try {
             $posts = Post::where('user_id', $userId)
                 ->with(['user:id,username,fullname,profile_picture', 'media'])
-                ->withCount(['likes', 'allComments as comments_count', 'shares'])
+                ->withCount(['likes', 'allComments as comments_count', 'shares', 'replies as replies_count'])
                 ->orderBy('created_at', 'desc')
                 ->get()
                 ->map(fn($post) => $this->formatPost($post));
@@ -185,13 +202,31 @@ class SocialController extends Controller
                         'views'           => (int) ($stream->audiences_count ?? 0),
                         'likes'           => 0,
                         'earned'          => '—',
-                        'status'          => $stream->is_active ? 'Running' : 'Ended',
+                        'status'          => $this->isStreamLive($stream) ? 'Running' : 'Ended',
                         'date'            => $stream->created_at->format('d/m/y'),
                         'createdAt'       => $stream->created_at->toIso8601String(),
                     ];
                 });
 
             return response()->json(['success' => true, 'data' => $streams]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
+        }
+    }
+
+    public function hidePost($id)
+    {
+        try {
+            $post = Post::find($id);
+            if (!$post) {
+                return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Post not found']], 404);
+            }
+            $post->update(['is_hidden' => !$post->is_hidden]);
+            return response()->json([
+                'success' => true,
+                'message' => $post->is_hidden ? 'Post hidden successfully' : 'Post unhidden successfully',
+                'data'    => ['is_hidden' => (bool) $post->is_hidden],
+            ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
         }
@@ -204,6 +239,7 @@ class SocialController extends Controller
             if (!$post) {
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Post not found']], 404);
             }
+            $post->adCampaigns()->delete();
             $post->delete();
             return response()->json(['success' => true, 'message' => 'Post deleted successfully']);
         } catch (\Exception $e) {
@@ -309,8 +345,22 @@ class SocialController extends Controller
             if (!$stream) {
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Live stream not found']], 404);
             }
-            $stream->update(['status' => 'ended']);
+            $stream->update(['is_active' => false]);
             return response()->json(['success' => true, 'message' => 'Live stream ended successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
+        }
+    }
+
+    public function deleteLiveStream($id)
+    {
+        try {
+            $stream = LiveStream::find($id);
+            if (!$stream) {
+                return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Live stream not found']], 404);
+            }
+            $stream->delete();
+            return response()->json(['success' => true, 'message' => 'Live stream deleted successfully']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
         }

@@ -19,7 +19,7 @@ public function index()
     $perPage = request()->get('limit', 4); // default to 4 instead of 20
 
     return Post::with(['user', 'comments', 'likes.user', 'media'])
-        ->withCount('allComments')
+        ->withCount(['allComments', 'shares as share_count'])
         ->orderByDesc('created_at')
         ->paginate($perPage);
 }
@@ -61,7 +61,7 @@ public function index()
         // if ($post->user_id !== $user->id) {
         //     return response()->json(['message' => 'Unauthorized'], 403);
         // }
-        return $post->load(['user', 'comments', 'likes','media'])->loadCount('allComments');
+        return $post->load(['user', 'comments', 'likes', 'media'])->loadCount(['allComments', 'shares as share_count']);
     }
 
     public function update($user, Post $post, $validated)

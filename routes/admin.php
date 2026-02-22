@@ -55,6 +55,7 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
         Route::get('/posts', [SocialController::class, 'getAllPosts']);
         Route::get('/posts/user/{userId}', [SocialController::class, 'getUserPosts']);
         Route::get('/posts/{id}', [SocialController::class, 'getPostById']);
+        Route::post('/posts/{id}/hide', [SocialController::class, 'hidePost']);
         Route::delete('/posts/{id}', [SocialController::class, 'deletePost']);
         Route::get('/statuses', [SocialController::class, 'getAllStatuses']);
         Route::get('/statuses/user/{userId}', [SocialController::class, 'getUserStatuses']);
@@ -62,6 +63,7 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
         Route::get('/live', [SocialController::class, 'getAllLiveStreams']);
         Route::get('/live/user/{userId}', [SocialController::class, 'getUserLiveStreams']);
         Route::post('/live/{id}/end', [SocialController::class, 'endLiveStream']);
+        Route::delete('/live/{id}', [SocialController::class, 'deleteLiveStream']);
         Route::get('/stats', [SocialController::class, 'getSocialStats']);
     });
 
@@ -155,6 +157,7 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
         Route::post('/send', [AdminNotificationController::class, 'sendNotification']);
         Route::post('/send-bulk', [AdminNotificationController::class, 'sendBulkNotification']);
         Route::get('/{id}', [AdminNotificationController::class, 'getNotificationById']);
+        Route::put('/{id}', [AdminNotificationController::class, 'updateNotificationStatus']);
         Route::delete('/{id}', [AdminNotificationController::class, 'deleteNotification']);
         Route::post('/{id}/read', [AdminNotificationController::class, 'markAsRead']);
     });

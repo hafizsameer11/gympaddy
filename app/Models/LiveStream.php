@@ -14,6 +14,12 @@ class LiveStream extends Model
         'agora_channel',
         'title',
         'is_active',
+        'last_heartbeat_at',
+    ];
+
+    protected $casts = [
+        'last_heartbeat_at' => 'datetime',
+        'is_active' => 'boolean',
     ];
     public function user(){
         return $this->belongsTo(User::class);

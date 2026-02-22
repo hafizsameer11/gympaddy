@@ -26,6 +26,12 @@ class AuthService
         ];
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
+
+            if ($user->is_banned) {
+                Auth::logout();
+                return response()->json(['message' => 'Your account has been banned. Please contact support.'], 403);
+            }
+
             $notification=  $this->pushNotificationService->sendToUserById($user->id, "You lgged in", "You Logged In successfully");
             Log::info("Notification send",[$notification]);
 

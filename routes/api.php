@@ -97,7 +97,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/refresh', [AuthController::class, 'refresh']);
 });
 
-Route::middleware('auth:sanctum')->prefix('user')->group(function () {
+Route::middleware(['auth:sanctum', 'check.banned'])->prefix('user')->group(function () {
     // User Profile
 
     Route::post('/start-call', [CallController::class, 'startCall']);
@@ -262,6 +262,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
     Route::put('/campaigns/{campaignId}/update-post', [BoostController::class, 'updateBoostedPost']);
     Route::get('/live-streams/{id}/gifts', [LiveStreamGiftController::class, 'index']);
     Route::post('/live-streams/{id}/gifts', [LiveStreamGiftController::class, 'store']);
+    Route::post('/live-streams/{id}/heartbeat', [LiveStreamAudienceController::class, 'heartbeat']);
     Route::post('/live-streams/{id}/join', [LiveStreamAudienceController::class, 'join']);
     Route::post('/live-streams/{id}/leave', [LiveStreamAudienceController::class, 'leave']);
     Route::get('/live-streams/{id}/audience', [LiveStreamAudienceController::class, 'currentAudience']);
@@ -292,7 +293,7 @@ Route::middleware('auth:sanctum')->prefix('user')->group(function () {
 });
 
 // Agora video/voice call endpoints
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'check.banned'])->group(function () {
     Route::post('video-call/token', [VideoCallController::class, 'generateToken']);
 
     Route::post('video-call/start', [VideoCallController::class, 'startCall']);

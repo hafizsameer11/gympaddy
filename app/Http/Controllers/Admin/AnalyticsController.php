@@ -50,10 +50,12 @@ class AnalyticsController extends Controller
         try {
             $period = $request->query('period', '30d');
             $days = match($period) {
+                '1d' => 1,
                 '7d' => 7,
                 '30d' => 30,
                 '90d' => 90,
                 '1y' => 365,
+                'all' => 730,
                 default => 30
             };
 
@@ -61,11 +63,19 @@ class AnalyticsController extends Controller
             $newUsersData = [];
             $activeUsersData = [];
 
-            for ($i = $days - 1; $i >= 0; $i--) {
+            $step = $days > 90 ? 7 : 1;
+            for ($i = $days - 1; $i >= 0; $i -= $step) {
                 $date = Carbon::today()->subDays($i);
                 $labels[] = $date->format('M d');
-                $newUsersData[] = User::whereDate('created_at', $date)->count();
-                $activeUsersData[] = User::whereDate('updated_at', $date)->count();
+                if ($step > 1) {
+                    $startDate = $date->copy();
+                    $endDate = $date->copy()->addDays($step - 1);
+                    $newUsersData[] = User::whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()])->count();
+                    $activeUsersData[] = User::whereBetween('updated_at', [$startDate->startOfDay(), $endDate->endOfDay()])->count();
+                } else {
+                    $newUsersData[] = User::whereDate('created_at', $date)->count();
+                    $activeUsersData[] = User::whereDate('updated_at', $date)->count();
+                }
             }
 
             return response()->json([
@@ -102,23 +112,35 @@ class AnalyticsController extends Controller
         try {
             $period = $request->query('period', '30d');
             $days = match($period) {
+                '1d' => 1,
                 '7d' => 7,
                 '30d' => 30,
                 '90d' => 90,
                 '1y' => 365,
+                'all' => 730,
                 default => 30
             };
 
             $labels = [];
             $revenueData = [];
 
-            for ($i = $days - 1; $i >= 0; $i--) {
+            $step = $days > 90 ? 7 : 1;
+            for ($i = $days - 1; $i >= 0; $i -= $step) {
                 $date = Carbon::today()->subDays($i);
                 $labels[] = $date->format('M d');
-                $revenueData[] = Transaction::where('type', 'topup')
-                    ->where('status', 'completed')
-                    ->whereDate('created_at', $date)
-                    ->sum('amount');
+                if ($step > 1) {
+                    $startDate = $date->copy();
+                    $endDate = $date->copy()->addDays($step - 1);
+                    $revenueData[] = Transaction::where('type', 'topup')
+                        ->where('status', 'completed')
+                        ->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()])
+                        ->sum('amount');
+                } else {
+                    $revenueData[] = Transaction::where('type', 'topup')
+                        ->where('status', 'completed')
+                        ->whereDate('created_at', $date)
+                        ->sum('amount');
+                }
             }
 
             $totalRevenue = array_sum($revenueData);
@@ -153,10 +175,12 @@ class AnalyticsController extends Controller
         try {
             $period = $request->query('period', '30d');
             $days = match($period) {
+                '1d' => 1,
                 '7d' => 7,
                 '30d' => 30,
                 '90d' => 90,
                 '1y' => 365,
+                'all' => 730,
                 default => 30
             };
 

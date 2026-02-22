@@ -16,6 +16,7 @@ class Post extends Model
         'media_url',
         'media_type',
         'is_boosted',
+        'is_hidden',
     ];
 
     public function user()
@@ -31,6 +32,11 @@ class Post extends Model
     public function allComments()
     {
         return $this->hasMany(Comment::class);
+    }
+
+    public function replies()
+    {
+        return $this->hasMany(Comment::class)->whereNotNull('parent_id');
     }
 
     public function getCommentsCountAttribute()

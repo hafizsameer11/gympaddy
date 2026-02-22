@@ -89,7 +89,10 @@ class AdsController extends Controller
 
             $paginated = $query->orderBy('created_at', 'desc')->paginate($limit, ['*'], 'page', $page);
 
-            $formatted = collect($paginated->items())->map(fn($ad) => $this->formatAd($ad));
+            $formatted = collect($paginated->items())
+                ->filter(fn($ad) => $ad->adable !== null)
+                ->values()
+                ->map(fn($ad) => $this->formatAd($ad));
 
             return response()->json([
                 'success' => true,
