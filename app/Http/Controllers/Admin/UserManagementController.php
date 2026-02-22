@@ -433,6 +433,94 @@ class UserManagementController extends Controller
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
         }
     }
+
+    public function getConversationMessages($conversationId)
+    {
+        try {
+            $conversation = Conversation::with([
+                'user1:id,username,fullname,profile_picture',
+                'user2:id,username,fullname,profile_picture',
+                'messages' => function ($q) {
+                    $q->orderBy('created_at', 'asc');
+                },
+                'messages.sender:id,username,fullname,profile_picture',
+            ])->find($conversationId);
+
+            if (!$conversation) {
+                return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Conversation not found']], 404);
+            }
+
+            $messages = $conversation->messages->map(function ($msg) {
+                return [
+                    'id'        => $msg->id,
+                    'senderId'  => $msg->sender_id,
+                    'senderName'=> $msg->sender->fullname ?? $msg->sender->username ?? 'Unknown',
+                    'senderAvatar' => $msg->sender->profile_picture ?? null,
+                    'message'   => $msg->message ?? '',
+                    'image'     => $msg->image ?? null,
+                    'read'      => (bool) $msg->read,
+                    'createdAt' => $msg->created_at->toIso8601String(),
+                    'time'      => $msg->created_at->format('h:i A'),
+                    'date'      => $msg->created_at->format('M d, Y'),
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $conversation->id,
+                    'user1' => [
+                        'id' => $conversation->user1->id ?? null,
+                        'name' => $conversation->user1->fullname ?? 'Unknown',
+                        'username' => $conversation->user1->username ?? '',
+                        'avatar' => $conversation->user1->profile_picture ?? null,
+                    ],
+                    'user2' => [
+                        'id' => $conversation->user2->id ?? null,
+                        'name' => $conversation->user2->fullname ?? 'Unknown',
+                        'username' => $conversation->user2->username ?? '',
+                        'avatar' => $conversation->user2->profile_picture ?? null,
+                    ],
+                    'messages' => $messages,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
+        }
+    }
+
+    public function getTicketDetails($ticketId)
+    {
+        try {
+            $ticket = Ticket::with('user:id,username,fullname,profile_picture')->find($ticketId);
+
+            if (!$ticket) {
+                return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Ticket not found']], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $ticket->id,
+                    'subject' => $ticket->subject,
+                    'message' => $ticket->message,
+                    'status' => $ticket->status,
+                    'user' => [
+                        'id' => $ticket->user->id ?? null,
+                        'name' => $ticket->user->fullname ?? 'Unknown',
+                        'username' => $ticket->user->username ?? '',
+                        'avatar' => $ticket->user->profile_picture ?? null,
+                    ],
+                    'createdAt' => $ticket->created_at->toIso8601String(),
+                    'date' => $ticket->created_at->format('M d, Y'),
+                    'time' => $ticket->created_at->format('h:i A'),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
+        }
+    }
+
     public function getUserTransactions($id)
     {
         try {
