@@ -97,6 +97,7 @@ class SocialController extends Controller
             'shares'         => (int) ($post->shares_count ?? 0),
             'replies'        => (int) ($post->replies_count ?? 0),
             'isBoosted'      => (bool) $post->is_boosted,
+            'isHidden'       => (bool) $post->is_hidden,
             'boostStatus'    => $post->is_boosted ? 'Yes' : 'No',
             'postType'       => $postType,
             'createdAt'      => $post->created_at->toIso8601String(),

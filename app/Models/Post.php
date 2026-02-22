@@ -19,6 +19,13 @@ class Post extends Model
         'is_hidden',
     ];
 
+    protected static function booted(): void
+    {
+        static::deleting(function (Post $post) {
+            $post->adCampaigns()->delete();
+        });
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -64,13 +71,9 @@ class Post extends Model
         return $this->hasMany(PostMedia::class)->orderBy('order');
     }
 
-    public function boostedCampaign()
-    {
-        return $this->hasOne(AdCampaign::class, 'post_id');
-    }
     public function adCampaigns()
-{
-    return $this->morphMany(AdCampaign::class, 'adable');
-}
+    {
+        return $this->morphMany(AdCampaign::class, 'adable');
+    }
 
 }

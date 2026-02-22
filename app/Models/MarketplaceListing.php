@@ -9,6 +9,13 @@ class MarketplaceListing extends Model
 {
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::deleting(function (MarketplaceListing $listing) {
+            $listing->adCampaigns()->delete();
+        });
+    }
+
     protected $fillable = [
         'user_id',
         'category_id',

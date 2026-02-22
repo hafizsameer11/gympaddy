@@ -11,34 +11,72 @@ use Carbon\Carbon;
 
 class AnalyticsController extends Controller
 {
+    private function periodToDays(string $period): int
+    {
+        return match ($period) {
+            '1d' => 1,
+            '7d' => 7,
+            '30d' => 30,
+            '90d' => 90,
+            '1y' => 365,
+            'all' => 0,
+            default => 30,
+        };
+    }
+
+    private function calculateGrowth(float $current, float $previous): float
+    {
+        if ($previous == 0) return $current > 0 ? 100.0 : 0.0;
+        return round((($current - $previous) / $previous) * 100, 1);
+    }
+
     public function getOverallAnalytics(Request $request)
     {
         try {
             $period = $request->query('period', '30d');
-            
-            $totalUsers = User::count();
-            $totalRevenue = Transaction::where('type', 'topup')->where('status', 'completed')->sum('amount');
-            $totalTransactions = Transaction::count();
+            $days = $this->periodToDays($period);
 
-            $previousPeriodUsers = User::where('created_at', '<', Carbon::now()->subDays(30))->count();
-            $userGrowth = $previousPeriodUsers > 0 ? (($totalUsers - $previousPeriodUsers) / $previousPeriodUsers) * 100 : 0;
+            $isAll = $days === 0;
+            $startDate = $isAll ? null : Carbon::now()->subDays($days)->startOfDay();
+
+            $usersQuery = User::query();
+            $revenueQuery = Transaction::where('type', 'topup')->where('status', 'completed');
+            $transactionsQuery = Transaction::query();
+
+            if ($startDate) {
+                $currentUsers = (clone $usersQuery)->where('created_at', '>=', $startDate)->count();
+                $currentRevenue = (float) (clone $revenueQuery)->where('created_at', '>=', $startDate)->sum('amount');
+                $currentTransactions = (clone $transactionsQuery)->where('created_at', '>=', $startDate)->count();
+
+                $prevStart = Carbon::now()->subDays($days * 2)->startOfDay();
+                $previousUsers = (clone $usersQuery)->whereBetween('created_at', [$prevStart, $startDate])->count();
+                $previousRevenue = (float) (clone $revenueQuery)->whereBetween('created_at', [$prevStart, $startDate])->sum('amount');
+                $previousTransactions = (clone $transactionsQuery)->whereBetween('created_at', [$prevStart, $startDate])->count();
+            } else {
+                $currentUsers = $usersQuery->count();
+                $currentRevenue = (float) $revenueQuery->sum('amount');
+                $currentTransactions = $transactionsQuery->count();
+                $previousUsers = 0;
+                $previousRevenue = 0;
+                $previousTransactions = 0;
+            }
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'users' => [
-                        'total' => $totalUsers,
-                        'growth' => round($userGrowth, 1)
+                        'total' => $currentUsers,
+                        'growth' => $this->calculateGrowth($currentUsers, $previousUsers),
                     ],
                     'revenue' => [
-                        'total' => (float) $totalRevenue,
-                        'growth' => 8.5
+                        'total' => $currentRevenue,
+                        'growth' => $this->calculateGrowth($currentRevenue, $previousRevenue),
                     ],
                     'transactions' => [
-                        'total' => $totalTransactions,
-                        'growth' => 3.2
-                    ]
-                ]
+                        'total' => $currentTransactions,
+                        'growth' => $this->calculateGrowth($currentTransactions, $previousTransactions),
+                    ],
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
@@ -49,15 +87,8 @@ class AnalyticsController extends Controller
     {
         try {
             $period = $request->query('period', '30d');
-            $days = match($period) {
-                '1d' => 1,
-                '7d' => 7,
-                '30d' => 30,
-                '90d' => 90,
-                '1y' => 365,
-                'all' => 730,
-                default => 30
-            };
+            $days = $this->periodToDays($period);
+            if ($days === 0) $days = 730;
 
             $labels = [];
             $newUsersData = [];
@@ -68,15 +99,21 @@ class AnalyticsController extends Controller
                 $date = Carbon::today()->subDays($i);
                 $labels[] = $date->format('M d');
                 if ($step > 1) {
-                    $startDate = $date->copy();
-                    $endDate = $date->copy()->addDays($step - 1);
-                    $newUsersData[] = User::whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()])->count();
-                    $activeUsersData[] = User::whereBetween('updated_at', [$startDate->startOfDay(), $endDate->endOfDay()])->count();
+                    $start = $date->copy()->startOfDay();
+                    $end = $date->copy()->addDays($step - 1)->endOfDay();
+                    $newUsersData[] = User::whereBetween('created_at', [$start, $end])->count();
+                    $activeUsersData[] = User::whereBetween('updated_at', [$start, $end])->count();
                 } else {
                     $newUsersData[] = User::whereDate('created_at', $date)->count();
                     $activeUsersData[] = User::whereDate('updated_at', $date)->count();
                 }
             }
+
+            $periodStart = Carbon::now()->subDays($days)->startOfDay();
+            $newUsersInPeriod = User::where('created_at', '>=', $periodStart)->count();
+            $totalUsers = User::count();
+            $prevStart = Carbon::now()->subDays($days * 2)->startOfDay();
+            $prevNewUsers = User::whereBetween('created_at', [$prevStart, $periodStart])->count();
 
             return response()->json([
                 'success' => true,
@@ -84,23 +121,17 @@ class AnalyticsController extends Controller
                     'chartData' => [
                         'labels' => $labels,
                         'datasets' => [
-                            [
-                                'label' => 'New Users',
-                                'data' => $newUsersData
-                            ],
-                            [
-                                'label' => 'Active Users',
-                                'data' => $activeUsersData
-                            ]
-                        ]
+                            ['label' => 'New Users', 'data' => $newUsersData],
+                            ['label' => 'Active Users', 'data' => $activeUsersData],
+                        ],
                     ],
                     'summary' => [
-                        'totalUsers' => User::count(),
-                        'newUsers' => array_sum($newUsersData),
+                        'totalUsers' => $totalUsers,
+                        'newUsers' => $newUsersInPeriod,
                         'activeUsers' => User::where('status', 'online')->count(),
-                        'growth' => 5.2
-                    ]
-                ]
+                        'growth' => $this->calculateGrowth($newUsersInPeriod, $prevNewUsers),
+                    ],
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
@@ -111,15 +142,8 @@ class AnalyticsController extends Controller
     {
         try {
             $period = $request->query('period', '30d');
-            $days = match($period) {
-                '1d' => 1,
-                '7d' => 7,
-                '30d' => 30,
-                '90d' => 90,
-                '1y' => 365,
-                'all' => 730,
-                default => 30
-            };
+            $days = $this->periodToDays($period);
+            if ($days === 0) $days = 730;
 
             $labels = [];
             $revenueData = [];
@@ -129,22 +153,32 @@ class AnalyticsController extends Controller
                 $date = Carbon::today()->subDays($i);
                 $labels[] = $date->format('M d');
                 if ($step > 1) {
-                    $startDate = $date->copy();
-                    $endDate = $date->copy()->addDays($step - 1);
-                    $revenueData[] = Transaction::where('type', 'topup')
+                    $start = $date->copy()->startOfDay();
+                    $end = $date->copy()->addDays($step - 1)->endOfDay();
+                    $revenueData[] = (float) Transaction::where('type', 'topup')
                         ->where('status', 'completed')
-                        ->whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()])
+                        ->whereBetween('created_at', [$start, $end])
                         ->sum('amount');
                 } else {
-                    $revenueData[] = Transaction::where('type', 'topup')
+                    $revenueData[] = (float) Transaction::where('type', 'topup')
                         ->where('status', 'completed')
                         ->whereDate('created_at', $date)
                         ->sum('amount');
                 }
             }
 
-            $totalRevenue = array_sum($revenueData);
+            $periodStart = Carbon::now()->subDays($days)->startOfDay();
+            $totalRevenue = (float) Transaction::where('type', 'topup')
+                ->where('status', 'completed')
+                ->where('created_at', '>=', $periodStart)
+                ->sum('amount');
             $averageRevenue = count($revenueData) > 0 ? $totalRevenue / count($revenueData) : 0;
+
+            $prevStart = Carbon::now()->subDays($days * 2)->startOfDay();
+            $prevRevenue = (float) Transaction::where('type', 'topup')
+                ->where('status', 'completed')
+                ->whereBetween('created_at', [$prevStart, $periodStart])
+                ->sum('amount');
 
             return response()->json([
                 'success' => true,
@@ -152,18 +186,15 @@ class AnalyticsController extends Controller
                     'chartData' => [
                         'labels' => $labels,
                         'datasets' => [
-                            [
-                                'label' => 'Revenue',
-                                'data' => $revenueData
-                            ]
-                        ]
+                            ['label' => 'Revenue', 'data' => $revenueData],
+                        ],
                     ],
                     'summary' => [
-                        'totalRevenue' => (float) $totalRevenue,
+                        'totalRevenue' => $totalRevenue,
                         'averageRevenue' => round($averageRevenue, 2),
-                        'growth' => 8.5
-                    ]
-                ]
+                        'growth' => $this->calculateGrowth($totalRevenue, $prevRevenue),
+                    ],
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
@@ -174,15 +205,8 @@ class AnalyticsController extends Controller
     {
         try {
             $period = $request->query('period', '30d');
-            $days = match($period) {
-                '1d' => 1,
-                '7d' => 7,
-                '30d' => 30,
-                '90d' => 90,
-                '1y' => 365,
-                'all' => 730,
-                default => 30
-            };
+            $days = $this->periodToDays($period);
+            if ($days === 0) $days = 730;
 
             $labels = [];
             $impressionsData = [];
@@ -197,9 +221,10 @@ class AnalyticsController extends Controller
                 $clicksData[] = (int) AdCampaign::whereBetween('created_at', [$startDate->startOfDay(), $endDate->endOfDay()])->sum('clicks');
             }
 
-            $totalImpressions = AdCampaign::sum('impressions');
-            $totalClicks = AdCampaign::sum('clicks');
-            $totalSpent = AdCampaign::sum('spent');
+            $periodStart = Carbon::now()->subDays($days)->startOfDay();
+            $totalImpressions = (int) AdCampaign::where('created_at', '>=', $periodStart)->sum('impressions');
+            $totalClicks = (int) AdCampaign::where('created_at', '>=', $periodStart)->sum('clicks');
+            $totalSpent = (float) AdCampaign::where('created_at', '>=', $periodStart)->sum('spent');
             $averageCTR = $totalImpressions > 0 ? ($totalClicks / $totalImpressions) * 100 : 0;
 
             return response()->json([
@@ -210,15 +235,15 @@ class AnalyticsController extends Controller
                         'datasets' => [
                             ['label' => 'Impressions', 'data' => $impressionsData],
                             ['label' => 'Clicks', 'data' => $clicksData],
-                        ]
+                        ],
                     ],
                     'summary' => [
                         'totalImpressions' => $totalImpressions,
                         'totalClicks' => $totalClicks,
                         'averageCTR' => round($averageCTR, 1),
-                        'totalSpent' => (float) $totalSpent
-                    ]
-                ]
+                        'totalSpent' => $totalSpent,
+                    ],
+                ],
             ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);

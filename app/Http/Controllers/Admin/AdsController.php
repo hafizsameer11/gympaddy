@@ -74,7 +74,16 @@ class AdsController extends Controller
     public function getAllAds(Request $request)
     {
         try {
-            $query = AdCampaign::with(['user', 'adable', 'insights']);
+            $query = AdCampaign::with(['user', 'adable', 'insights'])
+                ->where(function ($q) {
+                    $q->where(function ($sub) {
+                        $sub->where('adable_type', \App\Models\Post::class)
+                            ->whereIn('adable_id', \App\Models\Post::select('id'));
+                    })->orWhere(function ($sub) {
+                        $sub->where('adable_type', \App\Models\MarketplaceListing::class)
+                            ->whereIn('adable_id', \App\Models\MarketplaceListing::select('id'));
+                    });
+                });
 
             if ($request->has('status') && $request->status !== 'all') {
                 $query->where('status', $request->status);
