@@ -175,13 +175,40 @@ class UserManagementController extends Controller
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'User not found']], 404);
             }
 
-            $user->update([
-                'fullname' => $request->input('fullName', $user->fullname),
-                'phone'    => $request->input('phoneNumber', $user->phone),
-                'age'      => $request->input('age', $user->age),
-                'gender'   => $request->input('gender', $user->gender),
+            $updateData = [];
+
+            if ($request->has('fullName'))    $updateData['fullname'] = $request->fullName;
+            if ($request->has('username')) {
+                $existing = \App\Models\User::where('username', $request->username)->where('id', '!=', $id)->first();
+                if ($existing) {
+                    return response()->json(['success' => false, 'error' => ['code' => 'VALIDATION_ERROR', 'message' => 'Username is already taken']], 422);
+                }
+                $updateData['username'] = $request->username;
+            }
+            if ($request->has('email')) {
+                $existing = \App\Models\User::where('email', $request->email)->where('id', '!=', $id)->first();
+                if ($existing) {
+                    return response()->json(['success' => false, 'error' => ['code' => 'VALIDATION_ERROR', 'message' => 'Email is already taken']], 422);
+                }
+                $updateData['email'] = $request->email;
+            }
+            if ($request->has('phoneNumber')) $updateData['phone'] = $request->phoneNumber;
+            if ($request->has('age'))         $updateData['age'] = $request->age;
+            if ($request->has('gender'))      $updateData['gender'] = $request->gender;
+
+            if ($request->hasFile('profile_picture')) {
+                $path = $request->file('profile_picture')->store('profile_pictures', 'public');
+                $updateData['profile_picture'] = $path;
+            }
+
+            $user->update($updateData);
+            $user->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User updated successfully',
+                'data'    => $this->formatUser($user),
             ]);
-            return response()->json(['success' => true, 'message' => 'User updated successfully']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
         }
