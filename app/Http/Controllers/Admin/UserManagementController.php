@@ -415,7 +415,7 @@ class UserManagementController extends Controller
                         'otherUserName'   => 'Support Team',
                         'otherUsername'   => 'support',
                         'otherUserAvatar' => null,
-                        'lastMessage'     => $ticket->message ?? $ticket->subject ?? '',
+                        'lastMessage'     => $ticket->message ?? $ticket->description ?? $ticket->subject ?? '',
                         'lastMessageAt'   => $ticket->updated_at->toIso8601String(),
                         'messageCount'    => 1,
                         'date'            => $ticket->created_at->format('d/m/y'),
@@ -503,7 +503,7 @@ class UserManagementController extends Controller
                 'data' => [
                     'id' => $ticket->id,
                     'subject' => $ticket->subject,
-                    'message' => $ticket->message,
+                    'message' => $ticket->message ?? $ticket->description,
                     'status' => $ticket->status,
                     'user' => [
                         'id' => $ticket->user->id ?? null,

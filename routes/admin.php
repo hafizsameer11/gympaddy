@@ -170,6 +170,7 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
         Route::get('/tickets/{id}', [SupportController::class, 'getTicketById']);
         Route::post('/tickets', [SupportController::class, 'createTicket']);
         Route::put('/tickets/{id}', [SupportController::class, 'updateTicket']);
+        Route::post('/tickets/{id}/reply', [SupportController::class, 'replyToTicket']);
         Route::post('/tickets/{id}/close', [SupportController::class, 'closeTicket']);
     });
 

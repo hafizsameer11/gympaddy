@@ -45,6 +45,9 @@ class TicketController extends Controller
      */
     public function show(Ticket $ticket)
     {
+        if ($ticket->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
         return $this->ticketService->show($ticket);
     }
 
@@ -61,6 +64,9 @@ class TicketController extends Controller
      */
     public function update(UpdateTicketRequest $request, Ticket $ticket)
     {
+        if ($ticket->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
         return $this->ticketService->update($ticket, $request->validated());
     }
 
@@ -69,6 +75,9 @@ class TicketController extends Controller
      */
     public function destroy(Ticket $ticket)
     {
+        if ($ticket->user_id !== auth()->id()) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
         return $this->ticketService->destroy($ticket);
     }
 }

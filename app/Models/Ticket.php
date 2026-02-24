@@ -12,7 +12,10 @@ class Ticket extends Model
     protected $fillable = [
         'user_id',
         'subject',
+        'description',
         'message',
+        'admin_reply',
+        'priority',
         'status', // open, closed, pending
     ];
 

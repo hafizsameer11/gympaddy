@@ -8,6 +8,33 @@ use Illuminate\Http\Request;
 
 class SupportController extends Controller
 {
+    private function messageFromTicket(Ticket $ticket): string
+    {
+        return $ticket->message ?? $ticket->description ?? '';
+    }
+
+    private function formatTicket(Ticket $ticket): array
+    {
+        return [
+            'id' => (string) $ticket->id,
+            'user_id' => $ticket->user_id,
+            'subject' => $ticket->subject,
+            'message' => $this->messageFromTicket($ticket),
+            'description' => $ticket->description ?? null,
+            'admin_reply' => $ticket->admin_reply ?? null,
+            'status' => $ticket->status ?? 'open',
+            'priority' => $ticket->priority ?? 'medium',
+            'created_at' => optional($ticket->created_at)->toIso8601String(),
+            'updated_at' => optional($ticket->updated_at)->toIso8601String(),
+            'user' => [
+                'id' => $ticket->user?->id,
+                'username' => $ticket->user?->username ?? '',
+                'fullName' => $ticket->user?->fullname ?? '',
+                'profile_picture' => $ticket->user?->profile_picture ?? null,
+            ],
+        ];
+    }
+
     public function getAllTickets(Request $request)
     {
         try {
@@ -26,10 +53,12 @@ class SupportController extends Controller
 
             $tickets = $query->orderBy('created_at', 'desc')->paginate($limit, ['*'], 'page', $page);
 
+            $formattedTickets = collect($tickets->items())->map(fn (Ticket $ticket) => $this->formatTicket($ticket))->all();
+
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'tickets' => $tickets->items(),
+                    'tickets' => $formattedTickets,
                     'pagination' => [
                         'currentPage' => $tickets->currentPage(),
                         'totalPages' => $tickets->lastPage(),
@@ -50,6 +79,23 @@ class SupportController extends Controller
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Ticket not found']], 404);
             }
 
+            $message = $this->messageFromTicket($ticket);
+            $messages = [[
+                'id' => 'user_' . $ticket->id,
+                'text' => $message,
+                'isUser' => true,
+                'timestamp' => $ticket->created_at->toIso8601String(),
+            ]];
+
+            if (!empty($ticket->admin_reply)) {
+                $messages[] = [
+                    'id' => 'admin_' . $ticket->id,
+                    'text' => $ticket->admin_reply,
+                    'isUser' => false,
+                    'timestamp' => $ticket->updated_at->toIso8601String(),
+                ];
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -58,10 +104,11 @@ class SupportController extends Controller
                     'userName' => $ticket->user->fullname ?? 'Unknown',
                     'userEmail' => $ticket->user->email ?? '',
                     'subject' => $ticket->subject,
-                    'description' => $ticket->description,
+                    'message' => $message,
                     'status' => $ticket->status,
                     'priority' => $ticket->priority ?? 'medium',
-                    'messages' => [],
+                    'admin_reply' => $ticket->admin_reply,
+                    'messages' => $messages,
                     'createdAt' => $ticket->created_at->toIso8601String(),
                     'lastUpdated' => $ticket->updated_at->toIso8601String(),
                 ]
@@ -77,14 +124,15 @@ class SupportController extends Controller
             $validated = $request->validate([
                 'userId' => 'required',
                 'subject' => 'required|string',
-                'description' => 'required|string',
+                'message' => 'required|string',
                 'priority' => 'string',
             ]);
 
             $ticket = Ticket::create([
                 'user_id' => $validated['userId'],
                 'subject' => $validated['subject'],
-                'description' => $validated['description'],
+                'message' => $validated['message'],
+                'description' => $validated['message'],
                 'priority' => $validated['priority'] ?? 'medium',
                 'status' => 'open',
             ]);
@@ -102,8 +150,31 @@ class SupportController extends Controller
             if (!$ticket) {
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Ticket not found']], 404);
             }
-            $ticket->update($request->only(['status', 'priority']));
+            $ticket->update($request->only(['status', 'priority', 'admin_reply']));
             return response()->json(['success' => true, 'message' => 'Ticket updated successfully']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
+        }
+    }
+
+    public function replyToTicket(Request $request, $id)
+    {
+        try {
+            $validated = $request->validate([
+                'reply' => 'required|string',
+            ]);
+
+            $ticket = Ticket::find($id);
+            if (!$ticket) {
+                return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Ticket not found']], 404);
+            }
+
+            $ticket->update([
+                'admin_reply' => $validated['reply'],
+                'status' => $ticket->status === 'closed' ? 'closed' : 'pending',
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Reply sent successfully']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
         }
