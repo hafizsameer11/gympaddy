@@ -38,7 +38,7 @@ class SupportController extends Controller
     public function getAllTickets(Request $request)
     {
         try {
-            $query = Ticket::with('user:id,username,fullname,email');
+            $query = Ticket::with('user:id,username,fullname,email,profile_picture');
 
             if ($request->has('status') && $request->status !== 'all') {
                 $query->where('status', $request->status);
@@ -48,22 +48,14 @@ class SupportController extends Controller
                 $query->where('priority', $request->priority);
             }
 
-            $page = $request->get('page', 1);
-            $limit = $request->get('limit', 20);
+            $tickets = $query->orderBy('created_at', 'desc')->get();
 
-            $tickets = $query->orderBy('created_at', 'desc')->paginate($limit, ['*'], 'page', $page);
-
-            $formattedTickets = collect($tickets->items())->map(fn (Ticket $ticket) => $this->formatTicket($ticket))->all();
+            $formattedTickets = $tickets->map(fn (Ticket $ticket) => $this->formatTicket($ticket))->all();
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'tickets' => $formattedTickets,
-                    'pagination' => [
-                        'currentPage' => $tickets->currentPage(),
-                        'totalPages' => $tickets->lastPage(),
-                        'totalItems' => $tickets->total(),
-                    ]
                 ]
             ]);
         } catch (\Exception $e) {
@@ -74,7 +66,7 @@ class SupportController extends Controller
     public function getTicketById($id)
     {
         try {
-            $ticket = Ticket::with('user:id,username,fullname,email')->find($id);
+            $ticket = Ticket::with('user:id,username,fullname,email,profile_picture')->find($id);
             if (!$ticket) {
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Ticket not found']], 404);
             }

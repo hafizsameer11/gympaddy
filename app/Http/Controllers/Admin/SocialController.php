@@ -184,6 +184,21 @@ class SocialController extends Controller
     public function getUserLiveStreams($userId)
     {
         try {
+            // Auto-end stale streams for this user (heartbeat timed out / app closed)
+            $threshold = now()->subMinutes(2);
+            LiveStream::where('user_id', $userId)
+                ->where('is_active', true)
+                ->where(function ($q) use ($threshold) {
+                    $q->where(function ($q2) use ($threshold) {
+                        $q2->whereNotNull('last_heartbeat_at')
+                           ->where('last_heartbeat_at', '<', $threshold);
+                    })->orWhere(function ($q2) use ($threshold) {
+                        $q2->whereNull('last_heartbeat_at')
+                           ->where('updated_at', '<', $threshold);
+                    });
+                })
+                ->update(['is_active' => false]);
+
             $streams = LiveStream::where('user_id', $userId)
                 ->with('user:id,username,fullname,profile_picture')
                 ->withCount('audiences')
@@ -203,7 +218,8 @@ class SocialController extends Controller
                         'views'           => (int) ($stream->audiences_count ?? 0),
                         'likes'           => 0,
                         'earned'          => '—',
-                        'status'          => $this->isStreamLive($stream) ? 'Running' : 'Ended',
+                        'status'          => $stream->is_active ? 'Running' : 'Ended',
+                        'isActive'        => (bool) $stream->is_active,
                         'date'            => $stream->created_at->format('d/m/y'),
                         'createdAt'       => $stream->created_at->toIso8601String(),
                     ];
@@ -302,6 +318,24 @@ class SocialController extends Controller
     public function getAllLiveStreams(Request $request)
     {
         try {
+            // Auto-end streams where the host stopped sending heartbeats (app closed without ending).
+            // A stream is considered stale when is_active=true but the last heartbeat (or updated_at
+            // as a fallback) is older than 2 minutes.
+            $threshold = now()->subMinutes(2);
+            LiveStream::where('is_active', true)
+                ->where(function ($q) use ($threshold) {
+                    $q->where(function ($q2) use ($threshold) {
+                        // Has a heartbeat but it's too old
+                        $q2->whereNotNull('last_heartbeat_at')
+                           ->where('last_heartbeat_at', '<', $threshold);
+                    })->orWhere(function ($q2) use ($threshold) {
+                        // Never sent a heartbeat and stream record itself is stale
+                        $q2->whereNull('last_heartbeat_at')
+                           ->where('updated_at', '<', $threshold);
+                    });
+                })
+                ->update(['is_active' => false]);
+
             $query = LiveStream::with('user:id,username,fullname,profile_picture')
                 ->withCount('audiences');
 
@@ -314,6 +348,7 @@ class SocialController extends Controller
             }
 
             $streams = $query->orderBy('created_at', 'desc')->get()->map(function ($stream) {
+                $isLive = $this->isStreamLive($stream);
                 $user = $stream->user;
                 return [
                     'id'              => $stream->id,
@@ -327,7 +362,8 @@ class SocialController extends Controller
                     'views'           => (int) ($stream->audiences_count ?? 0),
                     'likes'           => 0,
                     'earned'          => '—',
-                    'status'          => $stream->is_active ? 'Running' : 'Ended',
+                    'status'          => $isLive ? 'Running' : 'Ended',
+                    'isActive'        => (bool) $stream->is_active,
                     'date'            => $stream->created_at->format('d/m/y'),
                     'createdAt'       => $stream->created_at->toIso8601String(),
                 ];
