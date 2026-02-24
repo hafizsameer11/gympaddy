@@ -5,9 +5,37 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class VerificationController extends Controller
 {
+    private function sendBusinessStatusEmail(Business $business, string $status, ?string $reason = null): void
+    {
+        $business->loadMissing('user');
+        $email = $business->user?->email;
+        if (!$email) {
+            return;
+        }
+
+        $businessName = $business->business_name ?: 'your business profile';
+
+        if ($status === 'approved') {
+            $body = "Congratulations! Your business account has been approved.\n\nBusiness: {$businessName}\n\nYou can now view your approved business profile in the app.";
+            $subject = 'Business Account Approved';
+        } elseif ($status === 'rejected') {
+            $rejectionReason = $reason ?: ($business->rejected_reason ?: 'Please review your details and try again.');
+            $body = "Your business account request was not approved.\n\nBusiness: {$businessName}\nReason: {$rejectionReason}\n\nPlease update your details and submit again.";
+            $subject = 'Business Account Update';
+        } else {
+            return;
+        }
+
+        Mail::raw($body, function ($message) use ($email, $subject) {
+            $message->to($email)->subject($subject);
+        });
+    }
+
     private function formatVerification(Business $business): array
     {
         $user = $business->user;
@@ -89,16 +117,30 @@ class VerificationController extends Controller
     {
         try {
             $businessId = str_replace('verify_', '', $id);
-            $business = Business::find($businessId);
+            $business = Business::with('user')->find($businessId);
             
             if (!$business) {
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Verification not found']], 404);
             }
 
+            $previousStatus = $business->status;
             $business->update([
                 'status' => 'approved',
                 'notes' => $request->notes ?? 'All documents verified'
             ]);
+
+            if ($previousStatus !== 'approved') {
+                try {
+                    $this->sendBusinessStatusEmail($business, 'approved');
+                } catch (\Throwable $e) {
+                    Log::warning('Business approval email failed to send', [
+                        'business_id' => $business->id,
+                        'user_id' => $business->user_id,
+                        'email' => $business->user?->email,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
             return response()->json(['success' => true, 'message' => 'Verification approved successfully']);
         } catch (\Exception $e) {
@@ -110,16 +152,30 @@ class VerificationController extends Controller
     {
         try {
             $businessId = str_replace('verify_', '', $id);
-            $business = Business::find($businessId);
+            $business = Business::with('user')->find($businessId);
             
             if (!$business) {
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Verification not found']], 404);
             }
 
+            $previousStatus = $business->status;
             $business->update([
                 'status' => 'rejected',
                 'rejected_reason' => $request->reason ?? 'Incomplete documentation'
             ]);
+
+            if ($previousStatus !== 'rejected') {
+                try {
+                    $this->sendBusinessStatusEmail($business, 'rejected', $request->reason);
+                } catch (\Throwable $e) {
+                    Log::warning('Business rejection email failed to send', [
+                        'business_id' => $business->id,
+                        'user_id' => $business->user_id,
+                        'email' => $business->user?->email,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
 
             return response()->json(['success' => true, 'message' => 'Verification rejected successfully']);
         } catch (\Exception $e) {

@@ -10,6 +10,31 @@ use Illuminate\Support\Facades\Mail;
 
 class BusinessController extends Controller
 {
+    private function sendBusinessStatusEmail(Business $business, string $status, ?string $reason = null): void
+    {
+        $email = $business->user?->email;
+        if (!$email) {
+            return;
+        }
+
+        $businessName = $business->business_name ?: 'your business profile';
+
+        if ($status === 'approved') {
+            $body = "Congratulations! Your business account has been approved.\n\nBusiness: {$businessName}\n\nYou can now view your approved business profile in the app.";
+            $subject = 'Business Account Approved';
+        } elseif ($status === 'rejected') {
+            $rejectionReason = $reason ?: ($business->rejected_reason ?: 'Please review your details and try again.');
+            $body = "Your business account request was not approved.\n\nBusiness: {$businessName}\nReason: {$rejectionReason}\n\nPlease update your details and submit again.";
+            $subject = 'Business Account Update';
+        } else {
+            return;
+        }
+
+        Mail::raw($body, function ($message) use ($email, $subject) {
+            $message->to($email)->subject($subject);
+        });
+    }
+
     public function index()
     {
         $totalBusinesss = Business::count();
@@ -50,21 +75,15 @@ class BusinessController extends Controller
         }
         $business->save();
 
-        // Send approval email once when status transitions to approved.
-        if ($status === 'approved' && $previousStatus !== 'approved' && $business->user?->email) {
+        // Send status email once when status changes to approved/rejected.
+        if ($status !== $previousStatus && in_array($status, ['approved', 'rejected'])) {
             try {
-                $businessName = $business->business_name ?: 'your business profile';
-                Mail::raw(
-                    "Congratulations! Your business account has been approved.\n\nBusiness: {$businessName}\n\nYou can now view your approved business profile in the app.",
-                    function ($message) use ($business) {
-                        $message->to($business->user->email)
-                            ->subject('Business Account Approved');
-                    }
-                );
+                $this->sendBusinessStatusEmail($business, $status, $business->rejected_reason);
             } catch (\Throwable $e) {
-                Log::warning('Business approval email failed to send', [
+                Log::warning('Business status email failed to send', [
                     'business_id' => $business->id,
                     'user_id' => $business->user_id,
+                    'status' => $status,
                     'email' => $business->user?->email,
                     'error' => $e->getMessage(),
                 ]);
