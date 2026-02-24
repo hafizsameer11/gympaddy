@@ -20,6 +20,7 @@ public function index()
 
     return Post::with(['user', 'comments', 'likes.user', 'media'])
         ->withCount(['allComments', 'shares as share_count'])
+        ->where('is_hidden', false)
         ->orderByDesc('created_at')
         ->paginate($perPage);
 }
