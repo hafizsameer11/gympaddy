@@ -75,7 +75,9 @@ class BusinessService
 public function getBusinessStatus()
 {
     $userId = Auth::id();
-    $business = Business::where('user_id', $userId)->first();
+    $business = Business::where('user_id', $userId)
+        ->latest('id')
+        ->first();
 
     if ($business) {
         $isApproved = $business->status === 'approved';

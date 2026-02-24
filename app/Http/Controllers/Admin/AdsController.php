@@ -170,7 +170,20 @@ class AdsController extends Controller
             if (!$ad) {
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Ad not found']], 404);
             }
+            $adable = $ad->adable;
             $ad->delete();
+
+            // Keep post boost flag consistent after deleting a campaign.
+            if ($adable instanceof \App\Models\Post) {
+                $hasActiveCampaigns = $adable->adCampaigns()
+                    ->whereIn('status', ['pending', 'active', 'paused'])
+                    ->exists();
+                if ((bool) $adable->is_boosted !== $hasActiveCampaigns) {
+                    $adable->is_boosted = $hasActiveCampaigns;
+                    $adable->save();
+                }
+            }
+
             return response()->json(['success' => true, 'message' => 'Ad deleted successfully']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);

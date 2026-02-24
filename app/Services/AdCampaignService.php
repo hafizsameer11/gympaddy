@@ -9,6 +9,35 @@ use Illuminate\Support\Facades\Auth;
 
 class AdCampaignService
 {
+    private const ACTIVE_CAMPAIGN_STATUSES = ['pending', 'active', 'paused'];
+
+    private function hasBlockingCampaign($adable, ?int $excludeCampaignId = null): bool
+    {
+        if (!$adable || !method_exists($adable, 'adCampaigns')) {
+            return false;
+        }
+
+        $query = $adable->adCampaigns()->whereIn('status', self::ACTIVE_CAMPAIGN_STATUSES);
+        if ($excludeCampaignId !== null) {
+            $query->where('id', '!=', $excludeCampaignId);
+        }
+
+        return $query->exists();
+    }
+
+    private function syncPostBoostFlag($adable, ?int $excludeCampaignId = null): void
+    {
+        if (!($adable instanceof Post)) {
+            return;
+        }
+
+        $shouldBeBoosted = $this->hasBlockingCampaign($adable, $excludeCampaignId);
+        if ((bool) $adable->is_boosted !== $shouldBeBoosted) {
+            $adable->is_boosted = $shouldBeBoosted;
+            $adable->save();
+        }
+    }
+
     public function index()
     {
         return AdCampaign::all();
@@ -129,7 +158,9 @@ class AdCampaignService
 
     public function destroy(AdCampaign $adCampaign)
     {
+        $adable = $adCampaign->adable;
         $adCampaign->delete();
+        $this->syncPostBoostFlag($adable, $adCampaign->id);
         return response()->json(['message' => 'Deleted']);
     }
 
@@ -144,8 +175,9 @@ class AdCampaignService
             ], 403);
         }
 
-        // Prevent duplicate boost
-        if ($post->is_boosted || $post->adCampaigns()->where('status', '!=', 'completed')->exists()) {
+        // Keep boost flag in sync, then prevent duplicate active/pending boosts.
+        $this->syncPostBoostFlag($post);
+        if ($this->hasBlockingCampaign($post)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'This post is already boosted.',
@@ -193,8 +225,8 @@ class AdCampaignService
             ], 403);
         }
 
-        // Prevent duplicate boost
-        if ($listing->adCampaigns()->where('status', '!=', 'completed')->exists()) {
+        // Prevent duplicate active/pending boosts.
+        if ($this->hasBlockingCampaign($listing)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'This listing is already boosted.',

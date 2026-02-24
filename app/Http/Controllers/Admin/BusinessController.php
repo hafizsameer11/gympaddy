@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class BusinessController extends Controller
 {
@@ -26,7 +28,8 @@ class BusinessController extends Controller
     }
     public function updateStatus(Request $request, $id)
     {
-        $business = Business::findOrFail($id);
+        $business = Business::with('user')->findOrFail($id);
+        $previousStatus = $business->status;
         $status = $request->input('status');
 
         if (!in_array($status, ['pending', 'approved', 'rejected'])) {
@@ -46,6 +49,28 @@ class BusinessController extends Controller
 
         }
         $business->save();
+
+        // Send approval email once when status transitions to approved.
+        if ($status === 'approved' && $previousStatus !== 'approved' && $business->user?->email) {
+            try {
+                $businessName = $business->business_name ?: 'your business profile';
+                Mail::raw(
+                    "Congratulations! Your business account has been approved.\n\nBusiness: {$businessName}\n\nYou can now view your approved business profile in the app.",
+                    function ($message) use ($business) {
+                        $message->to($business->user->email)
+                            ->subject('Business Account Approved');
+                    }
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Business approval email failed to send', [
+                    'business_id' => $business->id,
+                    'user_id' => $business->user_id,
+                    'email' => $business->user?->email,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         return response()->json(['message' => 'Business status updated successfully', 'data' => $business, 'status' => 'success']);
     }
 }

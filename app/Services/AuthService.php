@@ -28,8 +28,24 @@ class AuthService
             $user = Auth::user();
 
             if ($user->is_banned) {
-                Auth::logout();
-                return response()->json(['message' => 'Your account has been banned. Please contact support.'], 403);
+                if ($user->banned_until && now()->greaterThan($user->banned_until)) {
+                    $user->update([
+                        'is_banned' => false,
+                        'ban_reason' => null,
+                        'ban_duration' => null,
+                        'banned_until' => null,
+                    ]);
+                    $user->refresh();
+                } else {
+                    Auth::logout();
+
+                    $message = 'Your account has been banned. Please contact support.';
+                    if ($user->banned_until) {
+                        $message = 'Your account has been banned until ' . $user->banned_until->format('M d, Y h:i A') . '. Reason: ' . ($user->ban_reason ?? 'Not specified');
+                    }
+
+                    return response()->json(['message' => $message], 403);
+                }
             }
 
             $notification=  $this->pushNotificationService->sendToUserById($user->id, "You lgged in", "You Logged In successfully");
