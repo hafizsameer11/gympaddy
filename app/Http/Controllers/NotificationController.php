@@ -7,6 +7,7 @@ use App\Http\Requests\StoreNotificationRequest;
 use App\Http\Requests\UpdateNotificationRequest;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class NotificationController extends Controller
 {
@@ -76,8 +77,18 @@ class NotificationController extends Controller
     public function unread()
     {
         $user = Auth::user();
-        $notifications = $user->notifications()->whereNull('read_at')->latest()->get();
-        return response()->json($notifications);
+        $notifications = $user->notifications()
+            ->where(function ($query) {
+                $query->where('is_read', false)->orWhereNull('is_read');
+            })
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'count' => $notifications->count(),
+            'data' => $notifications,
+        ]);
     }
 
     public function markRead(Notification $notification)
@@ -86,8 +97,13 @@ class NotificationController extends Controller
         if ($notification->user_id !== $user->id) {
             return response()->json(['message' => 'Forbidden'], 403);
         }
-        $notification->read_at = now();
-        $notification->save();
-        return response()->json(['message' => 'Notification marked as read']);
+
+        $updatePayload = ['is_read' => true];
+        if (Schema::hasColumn('notifications', 'read_at')) {
+            $updatePayload['read_at'] = now();
+        }
+
+        $notification->update($updatePayload);
+        return response()->json(['success' => true, 'message' => 'Notification marked as read']);
     }
 }
