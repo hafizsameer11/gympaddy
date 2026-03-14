@@ -44,6 +44,27 @@ class ChatMessageController extends Controller
         return response()->json(['data'=>$UnreaadCOunt]);
     }
 
+    /**
+     * Mark all messages in a conversation as read for the current user (receiver).
+     * Called when the user opens the conversation so unread count resets to zero.
+     */
+    public function markMessagesRead(Request $request)
+    {
+        $request->validate([
+            'conversation_id' => 'required|integer|exists:conversations,id',
+        ]);
+        $user = Auth::user();
+        $conversation = Conversation::findOrFail($request->conversation_id);
+        if ($conversation->user1_id !== $user->id && $conversation->user2_id !== $user->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        ChatMessage::where('conversation_id', $conversation->id)
+            ->where('receiver_id', $user->id)
+            ->where('read', false)
+            ->update(['read' => true, 'read_at' => now()]);
+        return response()->json(['message' => 'Messages marked as read', 'data' => null]);
+    }
+
 
     /**
      * Show the form for creating a new resource.

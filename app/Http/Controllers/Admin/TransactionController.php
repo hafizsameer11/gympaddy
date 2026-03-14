@@ -17,6 +17,7 @@ class TransactionController extends Controller
             'transactionId'   => $tx->id,
             'fullName'        => $user->fullname ?? 'Unknown',
             'username'        => $user->username ?? null,
+            'email'           => $user->email ?? null,
             'profile_picture' => $user->profile_picture ?? null,
             'amount'          => (float) $tx->amount,
             'type'            => $tx->type === 'withdraw' ? 'withdrawal' : $tx->type,

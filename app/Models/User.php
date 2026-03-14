@@ -60,6 +60,16 @@ class User extends Authenticatable
     {
         return $this->hasMany(Post::class);
     }
+
+    public function marketplaceListings()
+    {
+        return $this->hasMany(MarketplaceListing::class);
+    }
+
+    public function businesses()
+    {
+        return $this->hasMany(Business::class);
+    }
     public function latestPost()
 {
     return $this->hasOne(Post::class)->latestOfMany();

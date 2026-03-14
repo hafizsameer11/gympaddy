@@ -93,6 +93,19 @@ class UserManagementController extends Controller
                 });
             }
 
+            $section = $request->get('section');
+            if ($section && in_array($section, ['social', 'marketplace', 'connect', 'gym'], true)) {
+                if ($section === 'social') {
+                    $query->whereHas('posts');
+                } elseif ($section === 'marketplace') {
+                    $query->whereHas('marketplaceListings');
+                } elseif ($section === 'connect') {
+                    $query->whereHas('profile');
+                } elseif ($section === 'gym') {
+                    $query->whereHas('businesses');
+                }
+            }
+
             $page  = $request->get('page', 1);
             $limit = $request->get('limit', 20);
 

@@ -149,12 +149,14 @@ class UserController extends Controller
         ]);
     }
     public function getBalance(){
-        $wallet=Wallet::where('user_id', Auth::id())->first();
+        $userId = Auth::id();
+        $wallet = Wallet::where('user_id', $userId)->first();
         if (!$wallet) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Wallet not found',
-            ], 404);
+            // Admin-created or legacy users may not have a wallet; create one so More page works
+            $wallet = Wallet::create([
+                'user_id' => $userId,
+                'balance' => 0,
+            ]);
         }
         return response()->json([
             'status' => 'success',

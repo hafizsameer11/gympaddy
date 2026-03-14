@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Admin;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -68,6 +69,24 @@ class AdminManagementController extends Controller
                 'name'     => $validated['fullName'],
                 'email'    => $validated['email'],
                 'password' => Hash::make($validated['password']),
+            ]);
+
+            // Create a corresponding User so the admin can log in via the dashboard (auth uses User model)
+            $username = 'admin_' . $admin->id;
+            $phone    = 'admin_' . $admin->id;
+            if (User::where('username', $username)->exists()) {
+                $username = 'admin_' . $admin->id . '_' . substr(md5($admin->email), 0, 6);
+            }
+            if (User::where('phone', $phone)->exists()) {
+                $phone = 'admin_' . $admin->id . '_' . substr(md5($admin->email), 0, 6);
+            }
+            User::create([
+                'username'   => $username,
+                'fullname'   => $validated['fullName'],
+                'email'      => $validated['email'],
+                'phone'      => $phone,
+                'password'   => Hash::make($validated['password']),
+                'role'       => 'admin',
             ]);
 
             return response()->json([

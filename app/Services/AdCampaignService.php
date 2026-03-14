@@ -160,7 +160,11 @@ class AdCampaignService
     {
         $adable = $adCampaign->adable;
         $adCampaign->delete();
-        $this->syncPostBoostFlag($adable, $adCampaign->id);
+        // Force fresh DB check so post/listing is no longer considered boosted
+        if (method_exists($adable, 'unsetRelation')) {
+            $adable->unsetRelation('adCampaigns');
+        }
+        $this->syncPostBoostFlag($adable, null);
         return response()->json(['message' => 'Deleted']);
     }
 
@@ -175,7 +179,8 @@ class AdCampaignService
             ], 403);
         }
 
-        // Keep boost flag in sync, then prevent duplicate active/pending boosts.
+        // Use fresh campaign data from DB so re-boost works after a previous campaign was deleted
+        $post->unsetRelation('adCampaigns');
         $this->syncPostBoostFlag($post);
         if ($this->hasBlockingCampaign($post)) {
             return response()->json([
@@ -225,7 +230,8 @@ class AdCampaignService
             ], 403);
         }
 
-        // Prevent duplicate active/pending boosts.
+        // Use fresh campaign data from DB so re-boost works after a previous campaign was deleted
+        $listing->unsetRelation('adCampaigns');
         if ($this->hasBlockingCampaign($listing)) {
             return response()->json([
                 'status' => 'error',
