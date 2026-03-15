@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\AppSetting;
 use App\Models\LiveStream;
+use App\Models\Transaction;
+use App\Models\Wallet;
 
 class LiveStreamService
 {
@@ -22,6 +25,35 @@ class LiveStreamService
 
     public function store($user, $validated)
     {
+        $liveCost = (float) (AppSetting::getValue('live_cost', '0') ?? 0);
+
+        if ($liveCost > 0) {
+            $wallet = Wallet::where('user_id', $user->id)->first();
+            if (!$wallet) {
+                $wallet = Wallet::create(['user_id' => $user->id, 'balance' => 0]);
+            }
+
+            $balance = (float) ($wallet->balance ?? 0);
+            if ($balance < $liveCost) {
+                return response()->json([
+                    'message' => 'Insufficient balance. Live streaming costs ₦' . number_format($liveCost, 2) . '. Please top up your wallet.',
+                ], 402);
+            }
+
+            $wallet->balance = $balance - $liveCost;
+            $wallet->save();
+
+            Transaction::create([
+                'wallet_id' => $wallet->id,
+                'type' => 'withdraw',
+                'amount' => $liveCost,
+                'reference' => null,
+                'related_user_id' => null,
+                'meta' => 'Live stream',
+                'status' => 'completed',
+            ]);
+        }
+
         $data = $validated;
         $data['user_id'] = $user->id;
         $liveStream = LiveStream::create($data);

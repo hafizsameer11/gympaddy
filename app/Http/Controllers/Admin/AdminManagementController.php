@@ -71,23 +71,32 @@ class AdminManagementController extends Controller
                 'password' => Hash::make($validated['password']),
             ]);
 
-            // Create a corresponding User so the admin can log in via the dashboard (auth uses User model)
-            $username = 'admin_' . $admin->id;
-            $phone    = 'admin_' . $admin->id;
-            if (User::where('username', $username)->exists()) {
-                $username = 'admin_' . $admin->id . '_' . substr(md5($admin->email), 0, 6);
+            // Create or update a User so the admin can log in via the dashboard (auth uses User model)
+            $user = User::where('email', $validated['email'])->first();
+            if ($user) {
+                $user->update([
+                    'fullname' => $validated['fullName'],
+                    'password' => Hash::make($validated['password']),
+                    'role'     => 'admin',
+                ]);
+            } else {
+                $username = 'admin_' . $admin->id;
+                $phone    = 'admin_' . $admin->id;
+                if (User::where('username', $username)->exists()) {
+                    $username = 'admin_' . $admin->id . '_' . substr(md5($admin->email), 0, 6);
+                }
+                if (User::where('phone', $phone)->exists()) {
+                    $phone = 'admin_' . $admin->id . '_' . substr(md5($admin->email), 0, 6);
+                }
+                User::create([
+                    'username'   => $username,
+                    'fullname'   => $validated['fullName'],
+                    'email'      => $validated['email'],
+                    'phone'      => $phone,
+                    'password'   => Hash::make($validated['password']),
+                    'role'       => 'admin',
+                ]);
             }
-            if (User::where('phone', $phone)->exists()) {
-                $phone = 'admin_' . $admin->id . '_' . substr(md5($admin->email), 0, 6);
-            }
-            User::create([
-                'username'   => $username,
-                'fullname'   => $validated['fullName'],
-                'email'      => $validated['email'],
-                'phone'      => $phone,
-                'password'   => Hash::make($validated['password']),
-                'role'       => 'admin',
-            ]);
 
             return response()->json([
                 'success' => true,
