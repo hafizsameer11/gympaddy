@@ -161,8 +161,20 @@ class SupportController extends Controller
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Ticket not found']], 404);
             }
 
+            // Don't overwrite previous admin replies.
+            // Admin replies are stored as a newline-separated string so the chat UI can render multiple bubbles.
+            $existingAdminReply = $ticket->admin_reply;
+            $newReply = trim($validated['reply']);
+
+            $updatedAdminReply = null;
+            if ($existingAdminReply && trim($existingAdminReply) !== '') {
+                $updatedAdminReply = rtrim($existingAdminReply) . "\n" . $newReply;
+            } else {
+                $updatedAdminReply = $newReply;
+            }
+
             $ticket->update([
-                'admin_reply' => $validated['reply'],
+                'admin_reply' => $updatedAdminReply,
                 'status' => $ticket->status === 'closed' ? 'closed' : 'pending',
             ]);
 
