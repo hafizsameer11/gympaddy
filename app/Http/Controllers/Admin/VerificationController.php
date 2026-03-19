@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Business;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -39,6 +40,8 @@ class VerificationController extends Controller
     private function formatVerification(Business $business): array
     {
         $user = $business->user;
+        $approvedBy = $business->approvedBy;
+        $rejectedBy = $business->rejectedBy;
 
         return [
             'id'            => 'verify_' . $business->id,
@@ -54,6 +57,8 @@ class VerificationController extends Controller
             'businessPhone' => $business->business_phone ?? '',
             'photo'         => $business->photo ?? null,
             'status'        => $business->status ?? 'pending',
+            'approvedByName'=> $approvedBy?->fullname ?? $approvedBy?->username ?? null,
+            'rejectedByName'=> $rejectedBy?->fullname ?? $rejectedBy?->username ?? null,
             'documents'     => $business->documents ? json_decode($business->documents) : [],
             'notes'         => $business->notes ?? '',
             'created_at'    => $business->created_at->format('d/m/y'),
@@ -64,7 +69,11 @@ class VerificationController extends Controller
     public function getAllVerifications(Request $request)
     {
         try {
-            $query = Business::with('user:id,username,fullname,email,phone,profile_picture');
+            $query = Business::with([
+                'user:id,username,fullname,email,phone,profile_picture',
+                'approvedBy:id,username,fullname,email,phone,profile_picture',
+                'rejectedBy:id,username,fullname,email,phone,profile_picture',
+            ]);
 
             if ($request->has('status') && $request->status !== 'all') {
                 $query->where('status', $request->status);
@@ -98,7 +107,11 @@ class VerificationController extends Controller
     {
         try {
             $businessId = str_replace('verify_', '', $id);
-            $business = Business::with('user:id,username,fullname,email,phone,profile_picture')->find($businessId);
+            $business = Business::with([
+                'user:id,username,fullname,email,phone,profile_picture',
+                'approvedBy:id,username,fullname,email,phone,profile_picture',
+                'rejectedBy:id,username,fullname,email,phone,profile_picture',
+            ])->find($businessId);
             
             if (!$business) {
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Verification not found']], 404);
@@ -123,10 +136,17 @@ class VerificationController extends Controller
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Verification not found']], 404);
             }
 
+            $admin = Auth::user();
+            if (!$admin) {
+                return response()->json(['success' => false, 'error' => ['code' => 'UNAUTHORIZED', 'message' => 'Admin not authenticated']], 401);
+            }
+
             $previousStatus = $business->status;
             $business->update([
                 'status' => 'approved',
-                'notes' => $request->notes ?? 'All documents verified'
+                'notes' => $request->notes ?? 'All documents verified',
+                'approved_by' => $admin->id,
+                'rejected_by' => null,
             ]);
 
             if ($previousStatus !== 'approved') {
@@ -158,10 +178,17 @@ class VerificationController extends Controller
                 return response()->json(['success' => false, 'error' => ['code' => 'NOT_FOUND', 'message' => 'Verification not found']], 404);
             }
 
+            $admin = Auth::user();
+            if (!$admin) {
+                return response()->json(['success' => false, 'error' => ['code' => 'UNAUTHORIZED', 'message' => 'Admin not authenticated']], 401);
+            }
+
             $previousStatus = $business->status;
             $business->update([
                 'status' => 'rejected',
-                'rejected_reason' => $request->reason ?? 'Incomplete documentation'
+                'rejected_reason' => $request->reason ?? 'Incomplete documentation',
+                'rejected_by' => $admin->id,
+                'approved_by' => null,
             ]);
 
             if ($previousStatus !== 'rejected') {
@@ -186,7 +213,11 @@ class VerificationController extends Controller
     public function getVerificationByUser($userId)
     {
         try {
-            $business = Business::with('user:id,username,fullname,email,phone,profile_picture')
+            $business = Business::with([
+                'user:id,username,fullname,email,phone,profile_picture',
+                'approvedBy:id,username,fullname,email,phone,profile_picture',
+                'rejectedBy:id,username,fullname,email,phone,profile_picture',
+            ])
                 ->where('user_id', $userId)
                 ->first();
 
@@ -212,6 +243,8 @@ class VerificationController extends Controller
                     'businessPhone'  => $business->business_phone ?? '',
                     'photo'          => $business->photo ?? null,
                     'status'         => $business->status ?? 'pending',
+                    'approvedByName'=> $business->approvedBy?->fullname ?? $business->approvedBy?->username ?? null,
+                    'rejectedByName'=> $business->rejectedBy?->fullname ?? $business->rejectedBy?->username ?? null,
                     'documents'      => $business->documents ? json_decode($business->documents) : [],
                     'notes'          => $business->notes ?? '',
                     'createdAt'      => $business->created_at->toIso8601String(),

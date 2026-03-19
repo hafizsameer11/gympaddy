@@ -18,7 +18,7 @@ class StoreUserRequest extends FormRequest
             'fullname' => 'required|string',
             'email' => 'required|email|unique:users,email',
             'phone' => 'required|string|unique:users,phone',
-            'age' => 'nullable|integer',
+            'age' => 'required|integer|min:18|max:120',
             'gender' => 'nullable|in:male,female,other',
             'password' => 'required|string|min:6',
             'role' => 'nullable|string',

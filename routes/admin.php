@@ -156,6 +156,7 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->group(function () {
     // Notification Endpoints
     Route::prefix('notifications')->group(function () {
         Route::get('/', [AdminNotificationController::class, 'getAllNotifications']);
+        Route::get('/unread-count', [AdminNotificationController::class, 'getUnreadCount']);
         Route::post('/send', [AdminNotificationController::class, 'sendNotification']);
         Route::post('/send-bulk', [AdminNotificationController::class, 'sendBulkNotification']);
         Route::get('/{id}', [AdminNotificationController::class, 'getNotificationById']);

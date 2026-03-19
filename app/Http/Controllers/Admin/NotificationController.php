@@ -7,6 +7,7 @@ use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class NotificationController extends Controller
 {
@@ -227,6 +228,37 @@ class NotificationController extends Controller
             }
             $notification->update(['is_read' => true]);
             return response()->json(['success' => true, 'message' => 'Notification marked as read']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
+        }
+    }
+
+    // For admin dashboard badge counter (e.g., unread support messages).
+    public function getUnreadCount(Request $request)
+    {
+        try {
+            $admin = Auth::user();
+            if (!$admin) {
+                return response()->json(['success' => false, 'error' => ['code' => 'UNAUTHORIZED', 'message' => 'Admin not authenticated']], 401);
+            }
+
+            $type = $request->query('type', 'all');
+
+            $query = Notification::where('user_id', $admin->id)
+                ->where('is_read', false);
+
+            if ($type !== 'all' && $type !== null && $type !== '') {
+                $query->where('type', $type);
+            }
+
+            $count = $query->count();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'count' => $count,
+                ]
+            ]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'error' => ['code' => 'SERVER_ERROR', 'message' => $e->getMessage()]], 500);
         }

@@ -21,10 +21,24 @@ class Business extends Model
         'status',
         'notes',
         'rejected_reason',
+        'approved_by',
+        'rejected_by',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    // Admin who approved this business verification
+    public function approvedBy()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    // Admin who rejected this business verification
+    public function rejectedBy()
+    {
+        return $this->belongsTo(User::class, 'rejected_by');
     }
 }
