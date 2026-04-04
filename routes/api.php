@@ -265,6 +265,7 @@ Route::middleware(['auth:sanctum', 'check.banned'])->prefix('user')->group(funct
     Route::post('/live-streams/{id}/gifts', [LiveStreamGiftController::class, 'store']);
     Route::post('/live-streams/{id}/heartbeat', [LiveStreamAudienceController::class, 'heartbeat']);
     Route::post('/live-streams/{id}/join', [LiveStreamAudienceController::class, 'join']);
+    Route::post('/live-streams/{id}/end-host', [LiveStreamAudienceController::class, 'endHostStream']);
     Route::post('/live-streams/{id}/leave', [LiveStreamAudienceController::class, 'leave']);
     Route::get('/live-streams/{id}/audience', [LiveStreamAudienceController::class, 'currentAudience']);
     Route::get('/live-streams/{id}/audience-count', [LiveStreamAudienceController::class, 'currentAudienceCount']);

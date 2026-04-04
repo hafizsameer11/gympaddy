@@ -14,9 +14,16 @@ class LiveStreamService
     $liveStreams = LiveStream::with([
         'user',
         'user.latestImagePost.media',
-        'audiences' // 💡 nested eager loading
+    ])
+    ->withCount([
+        'audiences as current_viewers_count' => function ($q) {
+            $q->whereNull('left_at');
+        },
     ])
     ->where('is_active', 1)
+    ->where(function ($q) {
+        $q->whereNull('status')->orWhere('status', 'active');
+    })
     ->latest()
     ->get();
 

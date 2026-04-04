@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LiveStream;
 use App\Models\LiveStreamChat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -31,6 +32,14 @@ class LiveStreamChatController extends Controller
             'type' => 'nullable|string',
             'reply_to_id' => 'nullable|exists:live_stream_chats,id',
         ]);
+
+        $stream = LiveStream::find($id);
+        if (!$stream || !$stream->is_active || ($stream->status ?? '') === 'ended') {
+            return response()->json([
+                'status' => false,
+                'message' => 'This live stream has ended. Chat is closed.',
+            ], 410);
+        }
 
         Log::info("Request object for messaging on live stream", $request->all());
 

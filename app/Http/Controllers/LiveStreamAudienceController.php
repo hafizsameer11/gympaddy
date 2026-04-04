@@ -9,8 +9,30 @@ use Illuminate\Support\Facades\Log;
 
 class LiveStreamAudienceController extends Controller
 {
+    /**
+     * Mark stream ended: inactive, status ended, and all "present" audience rows get left_at.
+     */
+    public static function finalizeStreamEnd(LiveStream $liveStream): void
+    {
+        $liveStream->update([
+            'is_active' => false,
+            'status' => 'ended',
+        ]);
+        LiveStreamAudience::where('live_stream_id', $liveStream->id)
+            ->whereNull('left_at')
+            ->update(['left_at' => now()]);
+    }
+
     public function join(Request $request, $liveStreamId)
     {
+        $stream = LiveStream::find($liveStreamId);
+        if (!$stream || !$stream->is_active || ($stream->status ?? '') === 'ended') {
+            return response()->json([
+                'status' => false,
+                'message' => 'This live stream has ended or is not available.',
+            ], 410);
+        }
+
         $userId = auth()->id();
 
         $audience = LiveStreamAudience::updateOrCreate(
@@ -22,6 +44,27 @@ class LiveStreamAudienceController extends Controller
             'status' => true,
             'message' => 'User joined the stream',
             'data' => $audience
+        ]);
+    }
+
+    /**
+     * Authenticated host ends their own stream (preferred for mobile app).
+     */
+    public function endHostStream($id)
+    {
+        $stream = LiveStream::where('id', $id)->where('user_id', auth()->id())->first();
+        if (!$stream) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Stream not found or you are not the host.',
+            ], 404);
+        }
+
+        self::finalizeStreamEnd($stream);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Live stream ended',
         ]);
     }
 
@@ -86,9 +129,9 @@ class LiveStreamAudienceController extends Controller
     {
         $liveStream = LiveStream::where('agora_channel', $channel_name)->first();
         if ($liveStream) {
-            $liveStream->update(['is_active' => false]);
+            self::finalizeStreamEnd($liveStream);
         }
-        Log::info('live streaiming edning',[$liveStream]);
+        Log::info('live streaming ending', ['channel' => $channel_name, 'stream_id' => $liveStream?->id]);
         return response()->json([
             'status' => true,
             'message' => 'Live stream ended'

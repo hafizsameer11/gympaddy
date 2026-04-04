@@ -14,6 +14,7 @@ class LiveStream extends Model
         'agora_channel',
         'title',
         'is_active',
+        'status',
         'last_heartbeat_at',
     ];
 
