@@ -5,11 +5,120 @@ namespace App\Services;
 use App\Models\AdCampaign;
 use App\Models\MarketplaceListing;
 use App\Models\Post;
+use App\Models\Transaction;
+use App\Models\Wallet;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AdCampaignService
 {
     private const ACTIVE_CAMPAIGN_STATUSES = ['pending', 'active', 'paused'];
+
+    /**
+     * Total GP charged upfront = daily budget (slider) × duration (days).
+     */
+    private function computeBoostTotalGp(float $dailyGp, int $durationDays): float
+    {
+        $durationDays = max(1, $durationDays);
+
+        return round($dailyGp * $durationDays, 2);
+    }
+
+    /**
+     * Total GP that was allocated for this campaign (for wallet delta on edit).
+     * New rows: daily_budget × duration (matches budget field).
+     * Legacy: daily_budget empty and budget stored the daily slider value.
+     */
+    private function campaignTotalGpAllocated(AdCampaign $campaign): float
+    {
+        $duration = max(1, (int) $campaign->duration);
+        $daily = (float) $campaign->daily_budget;
+        if ($daily > 0) {
+            return round($daily * $duration, 2);
+        }
+
+        return round((float) $campaign->budget * $duration, 2);
+    }
+
+    private function campaignDailyGp(AdCampaign $campaign): float
+    {
+        $daily = (float) $campaign->daily_budget;
+        if ($daily > 0) {
+            return $daily;
+        }
+
+        return (float) $campaign->budget;
+    }
+
+    private function insufficientBalanceResponse(): \Illuminate\Http\JsonResponse
+    {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Insufficient GP balance to run this boost. Please top up your wallet.',
+            'code' => 422,
+        ], 422);
+    }
+
+    /**
+     * Debit user wallet (must run inside an outer DB transaction).
+     */
+    private function debitWalletForBoost($user, float $gpAmount, array $meta): void
+    {
+        if ($gpAmount <= 0) {
+            return;
+        }
+
+        Wallet::firstOrCreate(
+            ['user_id' => $user->id],
+            ['balance' => 0]
+        );
+
+        $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->first();
+
+        if ((float) $wallet->balance < $gpAmount) {
+            throw new HttpResponseException($this->insufficientBalanceResponse());
+        }
+
+        $wallet->balance = (float) $wallet->balance - $gpAmount;
+        $wallet->save();
+
+        Transaction::create([
+            'wallet_id' => $wallet->id,
+            'type' => 'purchase',
+            'amount' => $gpAmount,
+            'reference' => null,
+            'related_user_id' => null,
+            'meta' => json_encode($meta),
+            'status' => 'completed',
+        ]);
+    }
+
+    private function creditWalletForBoost($user, float $gpAmount, array $meta): void
+    {
+        if ($gpAmount <= 0) {
+            return;
+        }
+
+        Wallet::firstOrCreate(
+            ['user_id' => $user->id],
+            ['balance' => 0]
+        );
+
+        $wallet = Wallet::where('user_id', $user->id)->lockForUpdate()->first();
+        $wallet->balance = (float) $wallet->balance + $gpAmount;
+        $wallet->save();
+
+        Transaction::create([
+            'wallet_id' => $wallet->id,
+            'type' => 'other',
+            'amount' => $gpAmount,
+            'reference' => null,
+            'related_user_id' => null,
+            'meta' => json_encode(array_merge($meta, ['adjustment' => 'boost_budget_change'])),
+            'status' => 'completed',
+        ]);
+    }
 
     private function hasBlockingCampaign($adable, ?int $excludeCampaignId = null): bool
     {
@@ -190,33 +299,48 @@ class AdCampaignService
             ], 409);
         }
 
-        // Create campaign via morphMany relation
-        $campaign = $post->adCampaigns()->create([
-            'user_id'     => $user->id,
-            'name'        => $payload['name'] ?? 'Boosted: ' . ($post->title ?? 'Post'),
-            'title'       => $payload['title'] ?? $post->title ?? 'Untitled',
-            'content'     => $payload['content'] ?? $post->content ?? 'No content provided.',
-            'media_url'   => $payload['media_url'] ?? $post->media_url ?? '',
-            'budget'      => $payload['budget'] ?? 0,
-            'daily_budget' => $payload['daily_budget'] ?? 0,
-            'duration'    => $payload['duration'] ?? 1,
-            'start_date'  => now(),
-            'end_date'    => now()->addDays($payload['duration'] ?? 1),
-            'location'    => $payload['location'] ?? null,
-            'age_min'     => $payload['age_min'] ?? 18,
-            'age_max'     => $payload['age_max'] ?? 65,
-            'gender'      => $payload['gender'] ?? 'all',
-            'status'      => 'pending',
-            'type'        => 'boost_post',
-        ]);
+        $dailyGp = (float) ($payload['budget'] ?? 0);
+        $duration = max(1, (int) ($payload['duration'] ?? 1));
+        $totalGp = $this->computeBoostTotalGp($dailyGp, $duration);
 
-        // Mark post as boosted
-        $post->is_boosted = true;
-        $post->save();
+        $campaign = null;
+
+        DB::transaction(function () use ($user, $post, $payload, $dailyGp, $duration, $totalGp, &$campaign) {
+            $this->debitWalletForBoost($user, $totalGp, [
+                'context' => 'boost_post',
+                'post_id' => $post->id,
+                'daily_budget_gp' => $dailyGp,
+                'duration_days' => $duration,
+                'total_gp' => $totalGp,
+            ]);
+
+            $campaign = $post->adCampaigns()->create([
+                'user_id'     => $user->id,
+                'name'        => $payload['name'] ?? 'Boosted: ' . ($post->title ?? 'Post'),
+                'title'       => $payload['title'] ?? $post->title ?? 'Untitled',
+                'content'     => $payload['content'] ?? $post->content ?? 'No content provided.',
+                'media_url'   => $payload['media_url'] ?? $post->media_url ?? '',
+                'budget'      => $totalGp,
+                'daily_budget' => $dailyGp,
+                'duration'    => $duration,
+                'start_date'  => now(),
+                'end_date'    => now()->addDays($duration),
+                'location'    => $payload['location'] ?? null,
+                'age_min'     => $payload['age_min'] ?? 18,
+                'age_max'     => $payload['age_max'] ?? 65,
+                'gender'      => $payload['gender'] ?? 'all',
+                'status'      => 'pending',
+                'type'        => 'boost_post',
+            ]);
+
+            $post->is_boosted = true;
+            $post->save();
+        });
 
         return response()->json([
             'status' => 'success',
-            'campaign' => $campaign
+            'campaign' => $campaign,
+            'charged_gp' => $totalGp,
         ]);
     }
     public function boostFromMarketplaceListing($user, MarketplaceListing $listing, array $payload)
@@ -240,89 +364,145 @@ class AdCampaignService
             ], 409);
         }
 
-        // Create campaign
-        $campaign = $listing->adCampaigns()->create([
-            'user_id'     => $user->id,
-            'name'        => $payload['name'] ?? 'Boosted: ' . ($listing->title ?? 'Listing'),
-            'title'       => $payload['title'] ?? $listing->title ?? 'Untitled',
-            'content'     => $payload['content'] ?? $listing->description ?? 'No content provided.',
-            'media_url'   => $payload['media_url'] ?? null,
-            'budget'      => $payload['budget'] ?? 0,
-            'daily_budget' => $payload['daily_budget'] ?? 0,
-            'duration'    => $payload['duration'] ?? 1,
-            'start_date'  => now(),
-            'end_date'    => now()->addDays($payload['duration'] ?? 1),
-            'location'    => $payload['location'] ?? null,
-            'age_min'     => $payload['age_min'] ?? 18,
-            'age_max'     => $payload['age_max'] ?? 65,
-            'gender'      => $payload['gender'] ?? 'all',
-            'status'      => 'pending',
-            'type'        => 'boost_listing',
-        ]);
+        $dailyGp = (float) ($payload['budget'] ?? 0);
+        $duration = max(1, (int) ($payload['duration'] ?? 1));
+        $totalGp = $this->computeBoostTotalGp($dailyGp, $duration);
+
+        $campaign = null;
+
+        DB::transaction(function () use ($user, $listing, $payload, $dailyGp, $duration, $totalGp, &$campaign) {
+            $this->debitWalletForBoost($user, $totalGp, [
+                'context' => 'boost_listing',
+                'listing_id' => $listing->id,
+                'daily_budget_gp' => $dailyGp,
+                'duration_days' => $duration,
+                'total_gp' => $totalGp,
+            ]);
+
+            $campaign = $listing->adCampaigns()->create([
+                'user_id'     => $user->id,
+                'name'        => $payload['name'] ?? 'Boosted: ' . ($listing->title ?? 'Listing'),
+                'title'       => $payload['title'] ?? $listing->title ?? 'Untitled',
+                'content'     => $payload['content'] ?? $listing->description ?? 'No content provided.',
+                'media_url'   => $payload['media_url'] ?? null,
+                'budget'      => $totalGp,
+                'daily_budget' => $dailyGp,
+                'duration'    => $duration,
+                'start_date'  => now(),
+                'end_date'    => now()->addDays($duration),
+                'location'    => $payload['location'] ?? null,
+                'age_min'     => $payload['age_min'] ?? 18,
+                'age_max'     => $payload['age_max'] ?? 65,
+                'gender'      => $payload['gender'] ?? 'all',
+                'status'      => 'pending',
+                'type'        => 'boost_listing',
+            ]);
+        });
 
         return response()->json([
             'status' => 'success',
-            'campaign' => $campaign
+            'campaign' => $campaign,
+            'charged_gp' => $totalGp,
         ]);
     }
     public function updatePostBoost(AdCampaign $campaign, array $payload)
 {
-    // if ($campaign->type !== 'boost_post') {
-    //     return response()->json([
-    //         'status' => 'error',
-    //         'message' => 'Invalid campaign type.',
-    //     ], 422);
-    // }
+    $user = Auth::user();
 
-    $campaign->update([
-        'name'         => $payload['name'] ?? $campaign->name,
-        'title'        => $payload['title'] ?? $campaign->title,
-        'content'      => $payload['content'] ?? $campaign->content,
-        'media_url'    => $payload['media_url'] ?? $campaign->media_url,
-        'budget'       => $payload['budget'] ?? $campaign->budget,
-        'daily_budget' => $payload['daily_budget'] ?? $campaign->daily_budget,
-        'duration'     => $payload['duration'] ?? $campaign->duration,
-        'end_date'     => now()->addDays($payload['duration'] ?? $campaign->duration),
-        'location'     => $payload['location'] ?? $campaign->location,
-        'age_min'      => $payload['age_min'] ?? $campaign->age_min,
-        'age_max'      => $payload['age_max'] ?? $campaign->age_max,
-        'gender'       => $payload['gender'] ?? $campaign->gender,
-    ]);
+    $newDaily = isset($payload['budget']) ? (float) $payload['budget'] : $this->campaignDailyGp($campaign);
+    $newDuration = isset($payload['duration']) ? max(1, (int) $payload['duration']) : max(1, (int) $campaign->duration);
+    $newTotal = $this->computeBoostTotalGp($newDaily, $newDuration);
+    $oldTotal = $this->campaignTotalGpAllocated($campaign);
+    $delta = round($newTotal - $oldTotal, 2);
+
+    DB::transaction(function () use ($user, $campaign, $payload, $newDaily, $newDuration, $newTotal, $delta) {
+        if ($delta > 0.0001) {
+            $this->debitWalletForBoost($user, $delta, [
+                'context' => 'boost_post_update',
+                'campaign_id' => $campaign->id,
+                'additional_gp' => $delta,
+            ]);
+        } elseif ($delta < -0.0001) {
+            $this->creditWalletForBoost($user, abs($delta), [
+                'context' => 'boost_post_update',
+                'campaign_id' => $campaign->id,
+                'refunded_gp' => abs($delta),
+            ]);
+        }
+
+        $campaign->update([
+            'name'         => $payload['name'] ?? $campaign->name,
+            'title'        => $payload['title'] ?? $campaign->title,
+            'content'      => $payload['content'] ?? $campaign->content,
+            'media_url'    => $payload['media_url'] ?? $campaign->media_url,
+            'budget'       => $newTotal,
+            'daily_budget' => $newDaily,
+            'duration'     => $newDuration,
+            'end_date'     => now()->addDays($newDuration),
+            'location'     => $payload['location'] ?? $campaign->location,
+            'age_min'      => $payload['age_min'] ?? $campaign->age_min,
+            'age_max'      => $payload['age_max'] ?? $campaign->age_max,
+            'gender'       => $payload['gender'] ?? $campaign->gender,
+        ]);
+    });
+
+    $campaign->refresh();
 
     return response()->json([
         'status' => 'success',
         'message' => 'Post campaign updated successfully.',
-        'campaign' => $campaign
+        'campaign' => $campaign,
+        'wallet_delta_gp' => $delta,
     ]);
 }
 public function updateMarketplaceBoost(AdCampaign $campaign, array $payload)
 {
-    // if ($campaign->type !== 'boost_listing') {
-    //     return response()->json([
-    //         'status' => 'error',
-    //         'message' => 'Invalid campaign type.',
-    //     ], 422);
-    // }
+    $user = Auth::user();
 
-    $campaign->update([
-        'name'         => $payload['name'] ?? $campaign->name,
-        'title'        => $payload['title'] ?? $campaign->title,
-        'content'      => $payload['content'] ?? $campaign->content,
-        'media_url'    => $payload['media_url'] ?? $campaign->media_url,
-        'budget'       => $payload['budget'] ?? $campaign->budget,
-        'daily_budget' => $payload['daily_budget'] ?? $campaign->daily_budget,
-        'duration'     => $payload['duration'] ?? $campaign->duration,
-        'end_date'     => now()->addDays($payload['duration'] ?? $campaign->duration),
-        'location'     => $payload['location'] ?? $campaign->location,
-        'age_min'      => $payload['age_min'] ?? $campaign->age_min,
-        'age_max'      => $payload['age_max'] ?? $campaign->age_max,
-        'gender'       => $payload['gender'] ?? $campaign->gender,
-    ]);
+    $newDaily = isset($payload['budget']) ? (float) $payload['budget'] : $this->campaignDailyGp($campaign);
+    $newDuration = isset($payload['duration']) ? max(1, (int) $payload['duration']) : max(1, (int) $campaign->duration);
+    $newTotal = $this->computeBoostTotalGp($newDaily, $newDuration);
+    $oldTotal = $this->campaignTotalGpAllocated($campaign);
+    $delta = round($newTotal - $oldTotal, 2);
+
+    DB::transaction(function () use ($user, $campaign, $payload, $newDaily, $newDuration, $newTotal, $delta) {
+        if ($delta > 0.0001) {
+            $this->debitWalletForBoost($user, $delta, [
+                'context' => 'boost_listing_update',
+                'campaign_id' => $campaign->id,
+                'additional_gp' => $delta,
+            ]);
+        } elseif ($delta < -0.0001) {
+            $this->creditWalletForBoost($user, abs($delta), [
+                'context' => 'boost_listing_update',
+                'campaign_id' => $campaign->id,
+                'refunded_gp' => abs($delta),
+            ]);
+        }
+
+        $campaign->update([
+            'name'         => $payload['name'] ?? $campaign->name,
+            'title'        => $payload['title'] ?? $campaign->title,
+            'content'      => $payload['content'] ?? $campaign->content,
+            'media_url'    => $payload['media_url'] ?? $campaign->media_url,
+            'budget'       => $newTotal,
+            'daily_budget' => $newDaily,
+            'duration'     => $newDuration,
+            'end_date'     => now()->addDays($newDuration),
+            'location'     => $payload['location'] ?? $campaign->location,
+            'age_min'      => $payload['age_min'] ?? $campaign->age_min,
+            'age_max'      => $payload['age_max'] ?? $campaign->age_max,
+            'gender'       => $payload['gender'] ?? $campaign->gender,
+        ]);
+    });
+
+    $campaign->refresh();
 
     return response()->json([
         'status' => 'success',
         'message' => 'Marketplace campaign updated successfully.',
-        'campaign' => $campaign
+        'campaign' => $campaign,
+        'wallet_delta_gp' => $delta,
     ]);
 }
 
