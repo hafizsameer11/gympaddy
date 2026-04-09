@@ -70,8 +70,29 @@ public function index()
         if ($post->user_id !== $user->id) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
-        $post->update($validated);
-        return response()->json($post->load(['user', 'comments', 'likes']));
+
+        $mediaInput = $validated['media'] ?? null;
+        unset($validated['media']);
+
+        $post->update(array_intersect_key($validated, array_flip(['title', 'content', 'media_url'])));
+
+        if ($mediaInput !== null && $mediaInput !== []) {
+            $files = is_array($mediaInput) ? $mediaInput : [$mediaInput];
+            $files = array_values(array_filter($files));
+            if ($files !== []) {
+                foreach ($post->media as $existing) {
+                    if ($existing->file_path && Storage::disk('public')->exists($existing->file_path)) {
+                        Storage::disk('public')->delete($existing->file_path);
+                    }
+                    $existing->delete();
+                }
+                $this->handleMediaUploads($post, $files);
+            }
+        }
+
+        return response()->json(
+            $post->fresh()->load(['user', 'comments', 'likes', 'media'])->loadCount(['allComments', 'shares as share_count'])
+        );
     }
 
     public function destroy($user, Post $post)

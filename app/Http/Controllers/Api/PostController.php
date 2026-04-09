@@ -48,7 +48,12 @@ class PostController extends Controller
     public function update(UpdatePostRequest $request, Post $post)
     {
         $user = Auth::user();
-        return $this->postService->update($user, $post, $request->validated());
+        $validated = $request->validated();
+        if ($request->hasFile('media')) {
+            $validated['media'] = $request->file('media');
+        }
+
+        return $this->postService->update($user, $post, $validated);
     }
 
     public function destroy(Post $post)

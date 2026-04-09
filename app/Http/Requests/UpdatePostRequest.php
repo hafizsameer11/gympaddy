@@ -16,9 +16,11 @@ class UpdatePostRequest extends FormRequest
     public function rules()
     {
         return [
-            'title' => 'sometimes|required|string|max:255',
-            'content' => 'nullable|string',
+            'title' => 'sometimes|nullable|string|max:255',
+            'content' => 'sometimes|nullable|string',
             'media_url' => 'nullable|url',
+            'media' => 'sometimes|array|max:10',
+            'media.*' => 'file|mimes:jpeg,jpg,png,gif,mp4,mov,avi,wmv,flv|max:102400',
         ];
     }
 
