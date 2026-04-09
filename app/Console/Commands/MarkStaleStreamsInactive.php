@@ -25,7 +25,7 @@ class MarkStaleStreamsInactive extends Command
                             ->where('updated_at', '<', $threshold);
                       });
             })
-            ->update(['is_active' => false]);
+            ->update(['is_active' => false, 'status' => 'ended']);
 
         if ($count > 0) {
             $this->info("Marked {$count} stale live stream(s) as inactive.");

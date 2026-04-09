@@ -11,6 +11,10 @@ class LiveStreamService
 {
   public function index()
 {
+    // Host sends heartbeat every ~30s; without it (app killed), hide from discover immediately
+    // instead of waiting only for the scheduled cleanup job.
+    $threshold = now()->subMinutes(2);
+
     $liveStreams = LiveStream::with([
         'user',
         'user.latestImagePost.media',
@@ -23,6 +27,12 @@ class LiveStreamService
     ->where('is_active', 1)
     ->where(function ($q) {
         $q->whereNull('status')->orWhere('status', 'active');
+    })
+    ->where(function ($q) use ($threshold) {
+        // No heartbeat yet: host still joining (do not require updated_at — slow setups stay listed).
+        // Once heartbeats exist, require a recent one so dead apps drop off the discover list immediately.
+        $q->whereNull('last_heartbeat_at')
+            ->orWhere('last_heartbeat_at', '>=', $threshold);
     })
     ->latest()
     ->get();
