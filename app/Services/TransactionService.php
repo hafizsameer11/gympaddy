@@ -13,7 +13,9 @@ class TransactionService
     public function index($user)
     {
         $wallets = $user->wallets()->pluck('id');
-        return Transaction::whereIn('wallet_id', $wallets)->get();
+        return Transaction::whereIn('wallet_id', $wallets)
+            ->orderByDesc('created_at')
+            ->get();
     }
 
     public function store($validated)

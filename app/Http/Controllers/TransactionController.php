@@ -22,8 +22,6 @@ class TransactionController extends Controller
      */
     public function index(Request $request)
     {
-        // Only show transactions for the authenticated user's wallet(s)
-        $wallets = $request->user()->wallets()->pluck('id');
         return $this->transactionService->index($request->user());
     }
 
@@ -75,7 +73,3 @@ class TransactionController extends Controller
         return $this->transactionService->destroy($transaction);
     }
 }
-    /**
-     * Update the specified resource in storage.
-     */
-  

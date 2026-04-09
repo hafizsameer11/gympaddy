@@ -15,7 +15,12 @@ class LiveStreamChat extends Model
       'created_at',
       'updated_at',
       'type',
-         'reply_to_id',
+      'amount',
+      'reply_to_id',
+   ];
+
+   protected $casts = [
+      'amount' => 'decimal:2',
    ];
 
    public function user()

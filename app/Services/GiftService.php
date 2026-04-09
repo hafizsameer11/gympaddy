@@ -31,10 +31,12 @@ class GiftService
                     'created_at' => $gift->created_at,
                     'updated_at' => $gift->updated_at,
                     'type' => $isSent ? 'sent' : 'received',
-                    'recipient' => $isSent ? $gift->receiver->fullname : $gift->sender->fullname,
-                    'description' => $isSent 
-                        ? "You sent {$gift->name} to {$gift->receiver->fullname}"
-                        : "You received {$gift->name} from {$gift->sender->fullname}",
+                    'recipient' => $isSent
+                        ? ($gift->receiver?->fullname ?? 'User')
+                        : ($gift->sender?->fullname ?? 'User'),
+                    'description' => $isSent
+                        ? "You sent {$gift->name} to " . ($gift->receiver?->fullname ?? 'User')
+                        : "You received {$gift->name} from " . ($gift->sender?->fullname ?? 'User'),
                     'date' => $gift->created_at->format('d/m/y'),
                     'timestamp' => $gift->created_at->format('h:i A'),
                 ];

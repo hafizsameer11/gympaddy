@@ -2,25 +2,23 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Wallet;
 use App\Http\Requests\StoreWalletRequest;
 use App\Http\Requests\UpdateWalletRequest;
 use App\Http\Requests\TopupWalletRequest;
 use App\Http\Requests\WithdrawWalletRequest;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class WalletController extends Controller
 {
     protected WalletService $walletService;
-    public function  topupp(Request $request){
-        $amount=$request->amount;
-        $user=Auth::user();
-        $wallet=Wallet::where('user_id',$user->id)->first();
-        $wallet->balance=$wallet->balance+$amount;
-        $wallet->save();
-        return response()->json(['status'=>'success'],200);
+
+    /**
+     * Legacy alias for POST /user/top-up — same behavior as wallet/topup (balance + transaction row).
+     */
+    public function topupp(TopupWalletRequest $request)
+    {
+        return $this->walletService->topup($request->user(), $request->validated());
     }
 
     public function __construct(WalletService $walletService)
