@@ -92,6 +92,11 @@ Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
 Route::post('auth/verify-otp', [AuthController::class, 'verifyOtp']);
 Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
 
+// Public test endpoint (no auth) - temporary response
+Route::get('public/status-check', function () {
+    return response()->json(false);
+});
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::post('auth/refresh', [AuthController::class, 'refresh']);
