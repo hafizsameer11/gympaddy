@@ -94,7 +94,9 @@ Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
 
 // Public test endpoint (no auth) - temporary response
 Route::get('public/status-check', function () {
-    return response()->json(false);
+    return response()->json([
+        'status' => false,
+    ]);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
