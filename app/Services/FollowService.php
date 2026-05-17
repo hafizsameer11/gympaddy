@@ -3,9 +3,14 @@
 namespace App\Services;
 
 use App\Models\Follow;
+use App\Models\User;
 
 class FollowService
 {
+    public function __construct(
+        protected PushNotificationService $pushNotificationService
+    ) {
+    }
     public function index()
     {
         return Follow::all();
@@ -25,6 +30,18 @@ class FollowService
             return response()->json(['message' => 'You are already following this user'], 409);
         }
         $follow = Follow::create($validated);
+
+        $follower = User::find($data['follower_id']);
+        if ($follower && (int) $data['followed_id'] !== (int) $data['follower_id']) {
+            $this->pushNotificationService->notifyUser(
+                (int) $data['followed_id'],
+                'New follower',
+                ($follower->username ?? $follower->fullname ?? 'Someone') . ' started following you.',
+                'follow',
+                ['follower_id' => (string) $follower->id]
+            );
+        }
+
         return response()->json($follow, 201);
     }
 
@@ -52,8 +69,18 @@ class FollowService
                 'follower_id' => auth()->id(),
                 'followed_id' => $userId,
             ]);
-            // return response()->json(['message' => 'You are not following this user'], 404);
-        }else{
+
+            $follower = User::find(auth()->id());
+            if ($follower && (int) $userId !== (int) auth()->id()) {
+                $this->pushNotificationService->notifyUser(
+                    (int) $userId,
+                    'New follower',
+                    ($follower->username ?? $follower->fullname ?? 'Someone') . ' started following you.',
+                    'follow',
+                    ['follower_id' => (string) $follower->id]
+                );
+            }
+        } else {
 
             $follow->delete() ;
         }

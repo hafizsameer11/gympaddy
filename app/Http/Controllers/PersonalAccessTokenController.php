@@ -56,14 +56,24 @@ class PersonalAccessTokenController extends Controller
         return response()->json(['message' => 'Deleted']);
     }
 
-    public function setfcmToken(Request $request){
-        $userId=Auth::user()->id;
-        Log::info('FCM TOKEN SET'.$request->fcmToken);
-        $fcmToken=$request->fcmToken;
-        $user=User::where('id',$userId)->first();
-        $user->fcmToken=$fcmToken;
+    public function setfcmToken(Request $request)
+    {
+        $request->validate([
+            'fcmToken' => 'required|string|max:512',
+        ]);
+
+        $user = Auth::user();
+        $fcmToken = $request->input('fcmToken');
+
+        $user->fcmToken = $fcmToken;
+        $user->device_token = $fcmToken;
         $user->save();
-        return response()->json(['status'=>'success','message'=>'fcm token set successfulky'],200);
-        
+
+        Log::info('FCM token saved for user ' . $user->id);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'FCM token saved successfully',
+        ], 200);
     }
 }

@@ -46,7 +46,7 @@ class StreamCallController extends Controller
         $receiver = \App\Models\User::find($request->receiver_id);
 
         $title = "Incoming " . ucfirst($request->call_type) . " Call";
-        $body = "{$caller->name} is calling you...";
+        $body = ($caller->fullname ?? $caller->username ?? 'Someone') . ' is calling you...';
 
         $pushService->sendToUserById(
             $receiver->id,

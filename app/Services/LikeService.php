@@ -3,9 +3,15 @@
 namespace App\Services;
 
 use App\Models\Like;
+use App\Models\Post;
+use App\Models\User;
 
 class LikeService
 {
+    public function __construct(
+        protected PushNotificationService $pushNotificationService
+    ) {
+    }
     public function index()
     {
         return Like::all();
@@ -36,6 +42,7 @@ class LikeService
         }
 
         $like = Like::create($data);
+        $this->notifyLikeOwner($like, $user->id);
         return response()->json($like, 201);
     }
     public function likePost($payload)
@@ -59,8 +66,34 @@ class LikeService
         }
 
         $like = Like::create($payload);
+        $this->notifyLikeOwner($like, $user->id);
         return response()->json($like, 201);
     }
+
+    protected function notifyLikeOwner(Like $like, int $likerUserId): void
+    {
+        $ownerId = null;
+        $type = strtolower((string) $like->likeable_type);
+
+        if (in_array($type, ['post', 'app\\models\\post'], true)) {
+            $post = Post::find($like->likeable_id);
+            $ownerId = $post?->user_id;
+        }
+
+        if (!$ownerId || (int) $ownerId === $likerUserId) {
+            return;
+        }
+
+        $liker = User::find($likerUserId);
+        $this->pushNotificationService->notifyUser(
+            (int) $ownerId,
+            'New like',
+            ($liker?->username ?? 'Someone') . ' liked your post.',
+            'like',
+            ['post_id' => (string) $like->likeable_id, 'liker_id' => (string) $likerUserId]
+        );
+    }
+
     public function show(Like $like)
     {
         return $like;

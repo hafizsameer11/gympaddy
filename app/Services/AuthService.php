@@ -48,8 +48,12 @@ class AuthService
                 }
             }
 
-            $notification=  $this->pushNotificationService->sendToUserById($user->id, "You lgged in", "You Logged In successfully");
-            Log::info("Notification send",[$notification]);
+            $this->pushNotificationService->notifyUser(
+                $user->id,
+                'Login successful',
+                'You signed in to GymPaddy.',
+                'login'
+            );
 
             $token = $user->createToken('auth_token')->plainTextToken;
             return response()->json([
@@ -111,6 +115,13 @@ class AuthService
             $message->to($validated['email'])
                 ->subject('Email verification OTP');
         });
+
+        $this->pushNotificationService->notifyUser(
+            $user->id,
+            'Welcome to GymPaddy',
+            'Your account was created successfully. Complete your profile and start connecting!',
+            'register'
+        );
 
         $token = $user->createToken('auth_token')->plainTextToken;
         return response()->json([

@@ -10,12 +10,17 @@ class NotificationService
     public function index()
     {
         $user = Auth::user();
-        return Notification::where('user_id', $user->id)
+        $notifications = Notification::where('user_id', $user->id)
             ->orWhere(function ($query) {
                 $query->whereNull('user_id')->where('type', 'broadcast');
             })
             ->latest()
             ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $notifications,
+        ]);
     }
 
     public function store($user, $validated)

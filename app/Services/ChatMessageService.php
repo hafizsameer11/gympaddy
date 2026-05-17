@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\DB;
 
 class ChatMessageService
 {
+    public function __construct(
+        protected PushNotificationService $pushNotificationService
+    ) {
+    }
     public function index($params = [])
     {
         $user = auth()->user();
@@ -124,6 +128,24 @@ class ChatMessageService
    
 
         $message->load(['sender', 'receiver', 'conversation']);
+
+        if ((int) $receiverId !== (int) $senderId) {
+            $sender = $message->sender;
+            $preview = $message->message;
+            if (strlen($preview) > 120) {
+                $preview = substr($preview, 0, 117) . '...';
+            }
+            $this->pushNotificationService->notifyUser(
+                (int) $receiverId,
+                'New message from ' . ($sender?->username ?? 'someone'),
+                $preview ?: 'You have a new message',
+                'message',
+                [
+                    'conversation_id' => (string) $conversation->id,
+                    'sender_id' => (string) $senderId,
+                ]
+            );
+        }
 
         return response()->json([
             'status' => 'success',

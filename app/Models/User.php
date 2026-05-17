@@ -28,6 +28,7 @@ class User extends Authenticatable
         'role',
         'profile_picture',
         'device_token',
+        'fcmToken',
         'is_banned',
         'ban_reason',
         'ban_duration',

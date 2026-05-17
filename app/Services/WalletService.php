@@ -7,6 +7,10 @@ use App\Models\Transaction;
 
 class WalletService
 {
+    public function __construct(
+        protected PushNotificationService $pushNotificationService
+    ) {
+    }
     public function index()
     {
         return Wallet::all();
@@ -70,6 +74,14 @@ public function topup($user, $validated)
         'status' => 'completed',
     ]);
 
+    $this->pushNotificationService->notifyUser(
+        $user->id,
+        'Wallet topped up',
+        'GP ' . number_format((float) $validated['amount'], 0) . ' was added to your wallet.',
+        'wallet_topup',
+        ['amount' => (string) $validated['amount']]
+    );
+
     return response()->json($wallet->fresh());
 }
 
@@ -92,6 +104,14 @@ public function topup($user, $validated)
             'meta' => null,
             'status' => 'completed',
         ]);
+
+        $this->pushNotificationService->notifyUser(
+            $user->id,
+            'Withdrawal successful',
+            'GP ' . number_format((float) $validated['amount'], 0) . ' was withdrawn from your wallet.',
+            'wallet_withdraw',
+            ['amount' => (string) $validated['amount']]
+        );
 
         return response()->json($wallet);
     }

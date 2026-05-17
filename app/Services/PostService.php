@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Post;
 use App\Models\PostMedia;
+use App\Services\PostMediaThumbnailService;
 use Illuminate\Support\Facades\Log;
 // use Illuminate\Support\Facades\Storage;
 use FFMpeg\FFMpeg;
@@ -14,6 +15,11 @@ use Intervention\Image\Encoders\JpegEncoder;
 use Illuminate\Support\Facades\Storage;
 class PostService
 {
+    public function __construct(
+        private readonly PostMediaThumbnailService $thumbnailService
+    ) {
+    }
+
 public function index()
 {
     $perPage = request()->get('limit', 4); // default to 4 instead of 20
@@ -84,6 +90,7 @@ public function index()
                     if ($existing->file_path && Storage::disk('public')->exists($existing->file_path)) {
                         Storage::disk('public')->delete($existing->file_path);
                     }
+                    $this->thumbnailService->deleteThumbnail($existing->thumbnail_path);
                     $existing->delete();
                 }
                 $this->handleMediaUploads($post, $files);
@@ -146,15 +153,24 @@ private function handleMediaUploads(Post $post, array $mediaFiles)
             Storage::disk('public')->delete($tempPath);
         }
 
-        // Save media record
+        $thumbnailPath = null;
+        if ($mediaType === 'video') {
+            $thumbnailPath = $this->thumbnailService->generateForVideoPath(
+                $finalPath,
+                (int) $post->id,
+                $order
+            );
+        }
+
         PostMedia::create([
-            'post_id'    => $post->id,
-            'file_path'  => $finalPath,
-            'file_name'  => $fileName,
-            'media_type' => $mediaType,
-            'mime_type'  => $file->getMimeType(),
-            'file_size'  => $fileSize,
-            'order'      => $order,
+            'post_id'        => $post->id,
+            'file_path'      => $finalPath,
+            'file_name'      => $fileName,
+            'thumbnail_path' => $thumbnailPath,
+            'media_type'     => $mediaType,
+            'mime_type'      => $file->getMimeType(),
+            'file_size'      => $fileSize,
+            'order'          => $order,
         ]);
 
         $order++;

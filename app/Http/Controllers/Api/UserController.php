@@ -10,6 +10,7 @@ use App\Models\Post;
 use App\Models\PostMedia;
 use App\Models\Reel;
 use App\Models\Story;
+use App\Models\UserProfile;
 use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -45,6 +46,7 @@ class UserController extends Controller
             'fullname' => 'sometimes|string|max:255',
             'age' => 'sometimes|integer|min:1|max:120',
             'gender' => 'sometimes|in:male,female,other',
+            'bio' => 'sometimes|nullable|string|max:500',
             'profile_picture' => 'sometimes|image|mimes:jpeg,jpg,png,gif|max:2048', // 2MB max
         ]);
 
@@ -73,17 +75,35 @@ class UserController extends Controller
             $validated['profile_picture'] = $path;
         }
 
+        $bio = $validated['bio'] ?? null;
+        unset($validated['bio']);
+
         // Update user with validated data
         $user->update($validated);
 
-        // Reload user to get updated data
+        if ($request->has('bio')) {
+            UserProfile::updateOrCreate(
+                ['user_id' => $user->id],
+                ['bio' => $bio]
+            );
+        }
+
         $user->refresh();
+        $user->load('profile');
 
         return response()->json([
             'status' => 'success',
             'message' => 'Profile updated successfully',
-            'user' => $user
+            'user' => $this->formatUserWithBio($user),
         ]);
+    }
+
+    private function formatUserWithBio(\App\Models\User $user): array
+    {
+        $data = $user->toArray();
+        $data['bio'] = $user->profile?->bio;
+
+        return $data;
     }
 
     /**
@@ -92,6 +112,7 @@ class UserController extends Controller
     public function profile()
     {
         $user = Auth::user();
+        $user->load('profile');
         //send followers count, following count, total post count and all posts
         $followersCount = Follow::where('followed_id', $user->id)->count();
         $followingCount = Follow::where('follower_id', $user->id)->count();
@@ -100,7 +121,8 @@ class UserController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'user' => $user,
+            'user' => $this->formatUserWithBio($user),
+            'bio' => $user->profile?->bio,
             'followers_count' => $followersCount,
             'following_count' => $followingCount,
             'post_count' => $postCount,
@@ -124,7 +146,7 @@ class UserController extends Controller
     }
     public function userDetails($userId)
     {
-        $user = \App\Models\User::findOrFail($userId);
+        $user = \App\Models\User::with('profile')->findOrFail($userId);
         //get follower count its list total post count and all posts
         $followersCount = Follow::where('followed_id', $userId)->count();
         $followingCount = Follow::where('follower_id', $userId)->count();
@@ -139,7 +161,8 @@ class UserController extends Controller
 
         return response()->json([
             'status' => 'success',
-            'user' => $user,
+            'user' => $this->formatUserWithBio($user),
+            'bio' => $user->profile?->bio,
             'followers_count' => $followersCount,
             'following_count' => $followingCount,
             'post_count' => $postCount,
@@ -204,10 +227,13 @@ class UserController extends Controller
 
             $postIds = Post::where('user_id', $userId)->pluck('id');
             if ($postIds->isNotEmpty()) {
-                $mediaPaths = PostMedia::whereIn('post_id', $postIds)->pluck('file_path')->filter();
-                foreach ($mediaPaths as $path) {
-                    Storage::disk('public')->delete($path);
-                }
+                $thumbnailService = app(\App\Services\PostMediaThumbnailService::class);
+                PostMedia::whereIn('post_id', $postIds)->get()->each(function (PostMedia $media) use ($thumbnailService) {
+                    if ($media->file_path) {
+                        Storage::disk('public')->delete($media->file_path);
+                    }
+                    $thumbnailService->deleteThumbnail($media->thumbnail_path);
+                });
             }
 
             Reel::where('user_id', $userId)->get()->each(function ($reel) {

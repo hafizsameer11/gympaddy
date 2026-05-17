@@ -2,54 +2,111 @@
 
 namespace App\Services;
 
+use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
 class PushNotificationService
 {
-    protected $firebaseNotificationService;
-
-    public function __construct(FirebaseNotificationService $firebaseNotificationService)
-    {
-        $this->firebaseNotificationService = $firebaseNotificationService;
+    public function __construct(
+        protected FirebaseNotificationService $firebaseNotificationService
+    ) {
     }
 
     /**
-     * Send a notification to a specific user by their user ID.
-     *
-     * @param int $userId
-     * @param string $title
-     * @param string $body
-     * @return array
+     * Save an in-app notification and optionally send a device push.
      */
-   public function sendToUserById(int $userId, string $title, string $body, array $data = []): array
-{
-    $user = User::find($userId);
-    Log::info("data received", [$userId, $title, $body, $data]);
+    public function notifyUser(
+        int $userId,
+        string $title,
+        string $body,
+        string $type = 'general',
+        array $data = [],
+        bool $attemptPush = true
+    ): array {
+        $notification = Notification::create([
+            'user_id' => $userId,
+            'title' => $title,
+            'body' => $body,
+            'type' => $type,
+            'status' => 'sent',
+            'is_read' => false,
+        ]);
 
-    if (!$user || !$user->fcmToken) {
-        Log::warning("User or FCM token not found for userId: $userId");
-        return ['status' => 'error', 'message' => 'User or FCM token not found'];
+        $push = ['status' => 'skipped', 'message' => 'Push not attempted'];
+
+        if ($attemptPush) {
+            $push = $this->sendPushToUser($userId, $title, $body, array_merge($data, [
+                'type' => $type,
+                'notification_id' => (string) $notification->id,
+            ]));
+        }
+
+        return [
+            'status' => 'success',
+            'notification_id' => $notification->id,
+            'notification' => $notification,
+            'push' => $push,
+        ];
     }
 
-    $stringUserId = (string) $userId;
+    /**
+     * @deprecated Use notifyUser() — kept for existing callers.
+     */
+    public function sendToUserById(int $userId, string $title, string $body, array $data = []): array
+    {
+        $type = isset($data['type']) && is_string($data['type']) ? $data['type'] : 'general';
 
-    try {
-        $response = $this->firebaseNotificationService->sendNotification(
-            $user->fcmToken,
-            $title,
-            $body,
-            $stringUserId,
-            $data
-        );
-
-        Log::info("Notification sent to userId: $userId", $response);
-
-        return ['status' => 'success', 'message' => 'Notification sent successfully', 'response' => $response];
-    } catch (\Exception $e) {
-        Log::error("Error sending notification to userId: $userId - " . $e->getMessage());
-        return ['status' => 'error', 'message' => 'Failed to send notification', 'error' => $e->getMessage()];
+        return $this->notifyUser($userId, $title, $body, $type, $data);
     }
-}
 
+    protected function sendPushToUser(int $userId, string $title, string $body, array $data = []): array
+    {
+        $user = User::find($userId);
+
+        if (!$user) {
+            Log::warning("Push skipped: user not found ($userId)");
+
+            return ['status' => 'error', 'message' => 'User not found'];
+        }
+
+        $fcmToken = $this->resolveFcmToken($user);
+
+        if (!$fcmToken) {
+            Log::info("Push skipped: no FCM token for user $userId (in-app notification still saved)");
+
+            return ['status' => 'skipped', 'message' => 'No FCM token on device yet'];
+        }
+
+        try {
+            $response = $this->firebaseNotificationService->sendNotification(
+                $fcmToken,
+                $title,
+                $body,
+                (string) $userId,
+                $data
+            );
+
+            Log::info("Push sent to user $userId", ['response' => $response]);
+
+            return ['status' => 'success', 'message' => 'Push sent', 'response' => $response];
+        } catch (\Throwable $e) {
+            Log::error("Push failed for user $userId: " . $e->getMessage());
+
+            return ['status' => 'error', 'message' => $e->getMessage()];
+        }
+    }
+
+    protected function resolveFcmToken(User $user): ?string
+    {
+        $token = $user->fcmToken ?? $user->device_token ?? null;
+
+        if (!is_string($token)) {
+            return null;
+        }
+
+        $token = trim($token);
+
+        return $token !== '' ? $token : null;
+    }
 }

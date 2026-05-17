@@ -14,11 +14,17 @@ class VideoProcessingService
             ->save($outputPath);
     }
 
+    /**
+     * @deprecated Use PostMediaThumbnailService for post media (frame-based, public disk).
+     */
     public function generateThumbnail($inputPath, $thumbnailPath)
     {
+        $frame = max(1, (int) config('media.video_thumbnail_frame', 4));
+        $seconds = max(0.0, ($frame - 1) / 30);
+
         FFMpeg::fromDisk('videos')
             ->open($inputPath)
-            ->getFrameFromSeconds(1)
+            ->getFrameFromSeconds($seconds)
             ->export()
             ->toDisk('thumbnails')
             ->save($thumbnailPath);
