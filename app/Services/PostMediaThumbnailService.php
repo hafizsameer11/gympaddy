@@ -3,19 +3,64 @@
 namespace App\Services;
 
 use App\Models\PostMedia;
-use FFMpeg;
-use FFMpeg\Coordinate\TimeCode;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-
 class PostMediaThumbnailService
 {
-    /** Fallback seek time when FPS cannot be read (~4th frame @ 30fps). */
     private const FALLBACK_TIME_SECONDS = 0.133;
+
+    private ?string $lastError = null;
 
     public function frameNumber(): int
     {
         return max(1, (int) config('media.video_thumbnail_frame', 4));
+    }
+
+    public function getLastError(): ?string
+    {
+        return $this->lastError;
+    }
+
+    public function ffmpegBinary(): ?string
+    {
+        $configured = config('media.ffmpeg_path');
+        if ($configured && $this->isExecutable($configured)) {
+            return $configured;
+        }
+
+        foreach (['ffmpeg', '/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg'] as $candidate) {
+            if ($this->isExecutable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        $which = trim((string) shell_exec('command -v ffmpeg 2>/dev/null') ?: '');
+        if ($which !== '' && $this->isExecutable($which)) {
+            return $which;
+        }
+
+        return null;
+    }
+
+    public function ffprobeBinary(): ?string
+    {
+        $configured = config('media.ffprobe_path');
+        if ($configured && $this->isExecutable($configured)) {
+            return $configured;
+        }
+
+        foreach (['ffprobe', '/usr/bin/ffprobe', '/usr/local/bin/ffprobe'] as $candidate) {
+            if ($this->isExecutable($candidate)) {
+                return $candidate;
+            }
+        }
+
+        $which = trim((string) shell_exec('command -v ffprobe 2>/dev/null') ?: '');
+        if ($which !== '' && $this->isExecutable($which)) {
+            return $which;
+        }
+
+        return null;
     }
 
     /**
@@ -23,15 +68,16 @@ class PostMediaThumbnailService
      */
     public function generateForVideoPath(string $videoRelativePath, int $postId, int $order = 0): ?string
     {
-        $disk = Storage::disk('public');
+        $this->lastError = null;
 
-        if (!$disk->exists($videoRelativePath)) {
-            Log::warning('Video not found for thumbnail generation', ['path' => $videoRelativePath]);
+        $fullVideoPath = $this->resolveVideoFullPath($videoRelativePath);
+        if (!$fullVideoPath) {
+            $this->lastError = "Video file not found: {$videoRelativePath}";
 
-            return null;
+            return $this->maybeCreatePlaceholder($videoRelativePath, $postId, $order);
         }
 
-        $fullVideoPath = $disk->path($videoRelativePath);
+        $disk = Storage::disk('public');
         $baseName = pathinfo($videoRelativePath, PATHINFO_FILENAME);
         $thumbFileName = "{$baseName}_thumb_{$order}.jpg";
         $thumbRelativePath = "posts/{$postId}/thumbnails/{$thumbFileName}";
@@ -39,15 +85,34 @@ class PostMediaThumbnailService
         $disk->makeDirectory("posts/{$postId}/thumbnails");
         $fullThumbPath = $disk->path($thumbRelativePath);
 
-        if ($this->extractFrameWithPhpFfmpeg($fullVideoPath, $fullThumbPath)) {
-            return $thumbRelativePath;
+        if (is_file($fullThumbPath)) {
+            @unlink($fullThumbPath);
         }
 
-        if ($this->extractFrameWithShell($fullVideoPath, $fullThumbPath)) {
-            return $thumbRelativePath;
+        $seekSeconds = $this->resolveSeekTimeSeconds($fullVideoPath);
+
+        foreach ($this->extractionAttempts($fullVideoPath, $seekSeconds) as $attempt) {
+            if ($this->runFfmpegToPath($attempt['command'], $fullThumbPath)) {
+                return $thumbRelativePath;
+            }
+            if (is_file($fullThumbPath)) {
+                @unlink($fullThumbPath);
+            }
         }
 
-        Log::error('All thumbnail generation strategies failed', ['video' => $videoRelativePath]);
+        if (config('media.video_thumbnail_placeholder_fallback', true)) {
+            $placeholder = $this->createPlaceholderImage($fullThumbPath);
+            if ($placeholder) {
+                Log::info('Using generic placeholder thumbnail', ['video' => $videoRelativePath]);
+
+                return $thumbRelativePath;
+            }
+        }
+
+        Log::error('All thumbnail generation strategies failed', [
+            'video' => $videoRelativePath,
+            'error' => $this->lastError,
+        ]);
 
         return null;
     }
@@ -86,50 +151,50 @@ class PostMediaThumbnailService
         }
     }
 
-    private function extractFrameWithPhpFfmpeg(string $fullVideoPath, string $fullThumbPath): bool
+    /**
+     * @return list<array{label: string, command: string}>
+     */
+    private function extractionAttempts(string $fullVideoPath, float $seekSeconds): array
     {
-        try {
-            $seconds = $this->resolveSeekTimeSeconds($fullVideoPath);
-            $ffmpeg = FFMpeg\FFMpeg::create($this->ffmpegConfig());
-            $video = $ffmpeg->open($fullVideoPath);
-            $frame = $video->frame(TimeCode::fromSeconds($seconds));
-            $frame->save($fullThumbPath);
+        $ffmpeg = $this->ffmpegBinary();
+        if (!$ffmpeg) {
+            $this->lastError = 'ffmpeg binary not found. Install ffmpeg or set FFMPEG_PATH in .env';
 
-            return is_file($fullThumbPath);
-        } catch (\Throwable $e) {
-            Log::warning('PHP-FFMpeg thumbnail extraction failed', [
-                'video' => $fullVideoPath,
-                'error' => $e->getMessage(),
-            ]);
-
-            return false;
+            return [];
         }
+
+        $in = escapeshellarg($fullVideoPath);
+        $attempts = [];
+
+        foreach ([$seekSeconds, 0.5, 1.0, 0.05] as $idx => $ss) {
+            $ssArg = escapeshellarg((string) max(0, $ss));
+            $attempts[] = [
+                'label' => "seek_{$idx}",
+                'command' => "{$ffmpeg} -hide_banner -loglevel error -y -ss {$ssArg} -i {$in} -frames:v 1 -an -q:v 3",
+            ];
+        }
+
+        $attempts[] = [
+            'label' => 'thumbnail_filter',
+            'command' => "{$ffmpeg} -hide_banner -loglevel error -y -i {$in} -vf thumbnail -frames:v 1 -an -q:v 3",
+        ];
+
+        $frameIndex = $this->frameNumber() - 1;
+        $attempts[] = [
+            'label' => 'select_frame',
+            'command' => "{$ffmpeg} -hide_banner -loglevel error -y -i {$in} -vf " . escapeshellarg("select=eq(n\\,{$frameIndex})") . ' -frames:v 1 -an -q:v 3',
+        ];
+
+        return $attempts;
     }
 
-    /**
-     * Shell fallback: select exact frame index (0-based) with ffmpeg -vf select=eq(n\,N).
-     */
-    private function extractFrameWithShell(string $fullVideoPath, string $fullThumbPath): bool
+    private function runFfmpegToPath(string $commandBase, string $fullThumbPath): bool
     {
-        $ffmpeg = config('media.ffmpeg_path', '/usr/bin/ffmpeg');
-        $frameIndex = $this->frameNumber() - 1;
-
-        $command = sprintf(
-            '%s -y -i %s -vf %s -vframes 1 -q:v 2 %s 2>&1',
-            escapeshellarg($ffmpeg),
-            escapeshellarg($fullVideoPath),
-            escapeshellarg('select=eq(n\\,' . $frameIndex . ')'),
-            escapeshellarg($fullThumbPath)
-        );
-
+        $command = $commandBase . ' ' . escapeshellarg($fullThumbPath) . ' 2>&1';
         exec($command, $output, $exitCode);
 
-        if ($exitCode !== 0 || !is_file($fullThumbPath)) {
-            Log::warning('Shell ffmpeg thumbnail extraction failed', [
-                'video' => $fullVideoPath,
-                'exit_code' => $exitCode,
-                'output' => implode("\n", array_slice($output, -5)),
-            ]);
+        if ($exitCode !== 0 || !$this->isValidImage($fullThumbPath)) {
+            $this->lastError = trim(implode("\n", array_slice($output, -8))) ?: "ffmpeg exit code {$exitCode}";
 
             return false;
         }
@@ -137,30 +202,50 @@ class PostMediaThumbnailService
         return true;
     }
 
+    private function resolveVideoFullPath(string $relativePath): ?string
+    {
+        $relativePath = ltrim($relativePath, '/');
+        $candidates = [
+            Storage::disk('public')->path($relativePath),
+            storage_path('app/public/' . $relativePath),
+            public_path('storage/' . $relativePath),
+        ];
+
+        foreach ($candidates as $path) {
+            if (is_file($path) && is_readable($path) && filesize($path) > 0) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
     private function resolveSeekTimeSeconds(string $fullVideoPath): float
     {
-        try {
-            $ffprobe = FFMpeg\FFProbe::create($this->ffmpegConfig());
-            $stream = $ffprobe->streams($fullVideoPath)->videos()->first();
-
-            if (!$stream) {
-                return self::FALLBACK_TIME_SECONDS;
-            }
-
-            $fps = $this->parseFrameRate(
-                $stream->get('avg_frame_rate') ?? $stream->get('r_frame_rate')
-            );
-
-            if ($fps <= 0) {
-                return self::FALLBACK_TIME_SECONDS;
-            }
-
-            $frameIndex = $this->frameNumber() - 1;
-
-            return max(0.0, $frameIndex / $fps);
-        } catch (\Throwable) {
+        $ffprobe = $this->ffprobeBinary();
+        if (!$ffprobe) {
             return self::FALLBACK_TIME_SECONDS;
         }
+
+        $command = sprintf(
+            '%s -v error -select_streams v:0 -show_entries stream=avg_frame_rate -of default=noprint_wrappers=1:nokey=1 %s 2>&1',
+            escapeshellarg($ffprobe),
+            escapeshellarg($fullVideoPath)
+        );
+
+        exec($command, $output, $exitCode);
+        if ($exitCode !== 0 || empty($output[0])) {
+            return self::FALLBACK_TIME_SECONDS;
+        }
+
+        $fps = $this->parseFrameRate(trim($output[0]));
+        if ($fps <= 0) {
+            return self::FALLBACK_TIME_SECONDS;
+        }
+
+        $frameIndex = $this->frameNumber() - 1;
+
+        return max(0.05, $frameIndex / $fps);
     }
 
     private function parseFrameRate(?string $rate): float
@@ -180,12 +265,85 @@ class PostMediaThumbnailService
         return $parsed > 0 ? $parsed : 30.0;
     }
 
-    private function ffmpegConfig(): array
+    private function maybeCreatePlaceholder(string $videoRelativePath, int $postId, int $order): ?string
     {
-        return [
-            'ffmpeg.binaries' => config('media.ffmpeg_path', '/usr/bin/ffmpeg'),
-            'ffprobe.binaries' => config('media.ffprobe_path', '/usr/bin/ffprobe'),
-            'timeout' => 120,
-        ];
+        if (!config('media.video_thumbnail_placeholder_fallback', true)) {
+            return null;
+        }
+
+        $disk = Storage::disk('public');
+        $baseName = pathinfo($videoRelativePath, PATHINFO_FILENAME);
+        $thumbRelativePath = "posts/{$postId}/thumbnails/{$baseName}_thumb_{$order}.jpg";
+        $disk->makeDirectory("posts/{$postId}/thumbnails");
+        $fullThumbPath = $disk->path($thumbRelativePath);
+
+        return $this->createPlaceholderImage($fullThumbPath) ? $thumbRelativePath : null;
+    }
+
+    private function createPlaceholderImage(string $fullThumbPath): bool
+    {
+        if (!function_exists('imagecreatetruecolor')) {
+            $this->lastError = 'GD extension not available for placeholder thumbnails';
+
+            return false;
+        }
+
+        try {
+            $width = (int) config('media.video_thumbnail_width', 720);
+            $height = (int) config('media.video_thumbnail_height', 720);
+
+            $img = imagecreatetruecolor($width, $height);
+            if ($img === false) {
+                return false;
+            }
+
+            $bg = imagecolorallocate($img, 26, 26, 26);
+            $accent = imagecolorallocate($img, 148, 3, 4);
+            imagefill($img, 0, 0, $bg);
+
+            $triangleSize = (int) min($width, $height) * 0.12;
+            $cx = (int) ($width / 2);
+            $cy = (int) ($height / 2);
+            $points = [
+                $cx - (int) ($triangleSize * 0.4), $cy - (int) ($triangleSize / 2),
+                $cx - (int) ($triangleSize * 0.4), $cy + (int) ($triangleSize / 2),
+                $cx + (int) ($triangleSize * 0.6), $cy,
+            ];
+            imagefilledpolygon($img, $points, $accent);
+
+            $dir = dirname($fullThumbPath);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+
+            $ok = imagejpeg($img, $fullThumbPath, 82);
+            imagedestroy($img);
+
+            return $ok && $this->isValidImage($fullThumbPath);
+        } catch (\Throwable $e) {
+            $this->lastError = 'Placeholder failed: ' . $e->getMessage();
+
+            return false;
+        }
+    }
+
+    private function isValidImage(string $path): bool
+    {
+        if (!is_file($path) || filesize($path) < 128) {
+            return false;
+        }
+
+        $info = @getimagesize($path);
+
+        return $info !== false && in_array($info[2] ?? 0, [IMAGDETYPE_JPEG, IMAGDETYPE_PNG], true);
+    }
+
+    private function isExecutable(string $path): bool
+    {
+        if ($path === '' || str_contains($path, '..')) {
+            return false;
+        }
+
+        return is_executable($path) || (is_file($path) && is_readable($path));
     }
 }

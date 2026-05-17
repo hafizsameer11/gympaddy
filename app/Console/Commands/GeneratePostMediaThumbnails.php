@@ -10,12 +10,29 @@ class GeneratePostMediaThumbnails extends Command
 {
     protected $signature = 'post-media:generate-thumbnails
                             {--force : Regenerate thumbnails even when thumbnail_path is already set}
-                            {--limit= : Maximum number of videos to process}';
+                            {--limit= : Maximum number of videos to process}
+                            {--debug : Show ffmpeg path and last error for failures}';
 
-    protected $description = 'Generate poster thumbnails for post videos (uses configured frame, default: 4th frame)';
+    protected $description = 'Generate poster thumbnails for post videos (frame #4 by default, or generic placeholder if ffmpeg fails)';
 
     public function handle(PostMediaThumbnailService $thumbnailService): int
     {
+        $ffmpeg = $thumbnailService->ffmpegBinary();
+        $ffprobe = $thumbnailService->ffprobeBinary();
+
+        if (!$ffmpeg) {
+            $this->error('ffmpeg not found. Install it (apt install ffmpeg) or set FFMPEG_PATH in .env');
+            if (!config('media.video_thumbnail_placeholder_fallback', true)) {
+                return self::FAILURE;
+            }
+            $this->warn('Will use generic placeholder images only (VIDEO_THUMBNAIL_PLACEHOLDER_FALLBACK=true).');
+        } else {
+            $this->info("Using ffmpeg: {$ffmpeg}");
+            if ($ffprobe) {
+                $this->info("Using ffprobe: {$ffprobe}");
+            }
+        }
+
         $query = PostMedia::query()->where('media_type', 'video');
 
         if (!$this->option('force')) {
@@ -55,7 +72,11 @@ class GeneratePostMediaThumbnails extends Command
             } else {
                 $failed++;
                 $this->newLine();
-                $this->warn("Failed: post_media #{$media->id} ({$media->file_path})");
+                $msg = "Failed: post_media #{$media->id} ({$media->file_path})";
+                if ($this->option('debug') && $thumbnailService->getLastError()) {
+                    $msg .= "\n  → " . $thumbnailService->getLastError();
+                }
+                $this->warn($msg);
             }
 
             $bar->advance();
