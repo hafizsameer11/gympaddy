@@ -335,7 +335,7 @@ class PostMediaThumbnailService
 
         $info = @getimagesize($path);
 
-        return $info !== false && in_array($info[2] ?? 0, [IMAGDETYPE_JPEG, IMAGDETYPE_PNG], true);
+        return $info !== false && in_array($info[2] ?? 0, [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP], true);
     }
 
     private function isExecutable(string $path): bool
