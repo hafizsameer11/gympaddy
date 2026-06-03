@@ -19,11 +19,19 @@ class PostMedia extends Model
         'mime_type',
         'file_size',
         'order',
+        'processing_status',
     ];
+
+    /** pending | processing | ready | failed */
+    public function isVideoProcessing(): bool
+    {
+        return $this->media_type === 'video'
+            && in_array($this->processing_status, ['pending', 'processing'], true);
+    }
 
     protected $appends = ['url', 'thumbnail', 'thumbnail_url'];
 
-    protected $hidden = ['thumbnail_path'];
+    protected $hidden = ['thumbnail_path', 'processing_status'];
 
     protected static function booted(): void
     {

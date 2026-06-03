@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\PublishedPostScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -17,10 +18,17 @@ class Post extends Model
         'media_type',
         'is_boosted',
         'is_hidden',
+        'publish_status',
+    ];
+
+    protected $hidden = [
+        'publish_status',
     ];
 
     protected static function booted(): void
     {
+        static::addGlobalScope(new PublishedPostScope());
+
         static::deleting(function (Post $post) {
             $post->adCampaigns()->delete();
         });

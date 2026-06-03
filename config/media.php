@@ -15,5 +15,8 @@ return [
 
     'video_thumbnail_width' => (int) env('VIDEO_THUMBNAIL_WIDTH', 720),
     'video_thumbnail_height' => (int) env('VIDEO_THUMBNAIL_HEIGHT', 720),
+
+    /** Queue for full post creation (media processing + publish). */
+    'post_creation_queue' => env('POST_CREATION_QUEUE', 'default'),
 ];
 

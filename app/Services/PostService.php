@@ -2,73 +2,75 @@
 
 namespace App\Services;
 
+use App\Jobs\CreatePostJob;
 use App\Models\Post;
-use App\Models\PostMedia;
-use App\Services\PostMediaThumbnailService;
-use Illuminate\Support\Facades\Log;
-// use Illuminate\Support\Facades\Storage;
-use FFMpeg\FFMpeg;
-use FFMpeg\Format\Video\X264;
-    use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\Encoders\JpegEncoder;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+
 class PostService
 {
     public function __construct(
-        private readonly PostMediaThumbnailService $thumbnailService
+        private readonly PostMediaThumbnailService $thumbnailService,
+        private readonly PostMediaProcessingService $mediaProcessor,
     ) {
     }
 
-public function index()
-{
-    $perPage = request()->get('limit', 4); // default to 4 instead of 20
+    public function index()
+    {
+        $perPage = request()->get('limit', 4);
 
-    return Post::with(['user', 'comments', 'likes.user', 'media'])
-        ->withCount(['allComments', 'shares as share_count'])
-        ->where('is_hidden', false)
-        ->orderByDesc('created_at')
-        ->paginate($perPage);
-}
+        return Post::with(['user', 'comments', 'likes.user', 'media'])
+            ->withCount(['allComments', 'shares as share_count'])
+            ->where('is_hidden', false)
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
+    }
 
-
-
-/*************  ✨ Windsurf Command ⭐  *************/
-/**
- * Store a newly created post in the database.
- *
- * This function creates a new post for the given user with the validated data.
- * If media files are included in the validated data, they are handled and uploaded.
- * Returns a JSON response with the created post including its relationships.
- *
- * @param \App\Models\User $user The authenticated user creating the post.
- * @param array $validated The validated data for creating the post.
- * @return \Illuminate\Http\JsonResponse The JSON response containing the created post.
- */
-
-/*******  5b83242a-f104-4bb0-b748-9cf964453e73  *******/
     public function store($user, $validated)
     {
-        $post = Post::create([
+        $mediaFiles = isset($validated['media']) ? array_values(array_filter($validated['media'])) : [];
+        $hasMedia = $mediaFiles !== [];
+
+        $post = Post::withoutGlobalScopes()->create([
             'user_id' => $user->id,
             'title' => $validated['title'] ?? null,
             'content' => $validated['content'] ?? null,
+            'publish_status' => $hasMedia ? 'processing' : 'published',
         ]);
 
-        // Handle media uploads if present
-        if (isset($validated['media']) && !empty($validated['media'])) {
-            $this->handleMediaUploads($post, $validated['media']);
+        if ($hasMedia) {
+            $batchId = Str::uuid()->toString();
+            $tempDirectory = "post-uploads/{$user->id}/{$batchId}";
+            $tempPayload = [];
+
+            foreach ($mediaFiles as $order => $file) {
+                $storedPath = $file->store($tempDirectory, 'public');
+                $tempPayload[] = [
+                    'disk_path' => $storedPath,
+                    'client_name' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'order' => $order,
+                ];
+            }
+
+            CreatePostJob::dispatch($post->id, $tempPayload, $tempDirectory)->afterResponse();
         }
 
-        return response()->json($post->load(['user', 'comments', 'likes', 'media']), 201);
+        return response()->json(
+            $this->formatPostResponse($post->load(['user', 'comments', 'likes', 'media'])),
+            201
+        );
     }
 
     public function show($user, Post $post)
     {
-        // if ($post->user_id !== $user->id) {
-        //     return response()->json(['message' => 'Unauthorized'], 403);
-        // }
-        return $post->load(['user', 'comments', 'likes', 'media'])->loadCount(['allComments', 'shares as share_count']);
+        if ($post->publish_status !== 'published' && (int) $post->user_id !== (int) $user->id) {
+            return response()->json(['message' => 'Post not found.'], 404);
+        }
+
+        return $this->formatPostResponse(
+            $post->load(['user', 'comments', 'likes', 'media'])->loadCount(['allComments', 'shares as share_count'])
+        );
     }
 
     public function update($user, Post $post, $validated)
@@ -93,12 +95,16 @@ public function index()
                     $this->thumbnailService->deleteThumbnail($existing->thumbnail_path);
                     $existing->delete();
                 }
-                $this->handleMediaUploads($post, $files);
+                foreach ($files as $order => $file) {
+                    $this->mediaProcessor->attachFromUpload($post, $file, $order);
+                }
             }
         }
 
         return response()->json(
-            $post->fresh()->load(['user', 'comments', 'likes', 'media'])->loadCount(['allComments', 'shares as share_count'])
+            $this->formatPostResponse(
+                $post->fresh()->load(['user', 'comments', 'likes', 'media'])->loadCount(['allComments', 'shares as share_count'])
+            )
         );
     }
 
@@ -115,118 +121,11 @@ public function index()
         }
     }
 
-
-
-private function handleMediaUploads(Post $post, array $mediaFiles)
-{
-    $order = 0;
-    $manager = new ImageManager(new Driver());
-
-    foreach ($mediaFiles as $file) {
-        $isImage = str_starts_with($file->getMimeType(), 'image/');
-        $mediaType = $isImage ? 'image' : 'video';
-
-        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $fileName = time() . '_' . $order . '_' . str()->slug($originalName) . ($isImage ? '.jpg' : '.' . $file->getClientOriginalExtension());
-        $filePath = "posts/{$post->id}/{$fileName}";
-
-        // Ensure the post directory exists
-        Storage::disk('public')->makeDirectory("posts/{$post->id}");
-
-        if ($isImage) {
-            // ✅ Compress image using Intervention v3
-            $image = $manager
-                ->read($file)
-                ->scale(width: 1080) // resize proportionally
-                ->encode(new JpegEncoder(quality: 55)); // compress
-
-            Storage::disk('public')->put($filePath, (string) $image);
-            $finalPath = $filePath;
-            $fileSize = Storage::disk('public')->size($finalPath);
-        } else {
-            // ⏯️ Handle video upload/compression
-            $tempPath = $file->storeAs('temp', $fileName, 'public');
-            $finalPath = $this->compressVideo($tempPath, $filePath);
-            $fileSize = Storage::disk('public')->size($finalPath);
-
-            // Clean up temp file
-            Storage::disk('public')->delete($tempPath);
-        }
-
-        $thumbnailPath = null;
-        if ($mediaType === 'video') {
-            $thumbnailPath = $this->thumbnailService->generateForVideoPath(
-                $finalPath,
-                (int) $post->id,
-                $order
-            );
-        }
-
-        PostMedia::create([
-            'post_id'        => $post->id,
-            'file_path'      => $finalPath,
-            'file_name'      => $fileName,
-            'thumbnail_path' => $thumbnailPath,
-            'media_type'     => $mediaType,
-            'mime_type'      => $file->getMimeType(),
-            'file_size'      => $fileSize,
-            'order'          => $order,
-        ]);
-
-        $order++;
-    }
-}
-
-
-    private function compressVideo(string $inputPath, string $outputPath): string
+    /** Same JSON shape the mobile app already expects (no new fields). */
+    private function formatPostResponse(Post $post): Post
     {
-        try {
-            $ffmpeg = FFMpeg::create([
-                'ffmpeg.binaries' => config('media.ffmpeg_path', '/usr/bin/ffmpeg'),
-                'ffprobe.binaries' => config('media.ffprobe_path', '/usr/bin/ffprobe'),
-                'timeout' => 3600,
-                'ffmpeg.threads' => 12,
-            ]);
+        $post->makeHidden(['publish_status']);
 
-            $inputFullPath = Storage::disk('public')->path($inputPath);
-            $outputFullPath = Storage::disk('public')->path($outputPath);
-
-            // Ensure output directory exists
-            $outputDir = dirname($outputFullPath);
-            if (!is_dir($outputDir)) {
-                mkdir($outputDir, 0755, true);
-            }
-
-            $video = $ffmpeg->open($inputFullPath);
-
-            // Configure compression settings
-            $format = new X264();
-            $format->setKiloBitrate(1000) // 1000 kbps
-                ->setAudioChannels(2)
-                ->setAudioKiloBitrate(128);
-
-            // Resize video if needed (max 720p)
-            $video->filters()
-                ->resize(new \FFMpeg\Coordinate\Dimension(1280, 720), \FFMpeg\Filters\Video\ResizeFilter::RESIZEMODE_INSET);
-
-            $video->save($format, $outputFullPath);
-
-            Log::info("Video compressed successfully", [
-                'input' => $inputPath,
-                'output' => $outputPath
-            ]);
-
-            return $outputPath;
-        } catch (\Exception $e) {
-            Log::error("Video compression failed", [
-                'input' => $inputPath,
-                'output' => $outputPath,
-                'error' => $e->getMessage()
-            ]);
-
-            // Fallback: copy original file
-            Storage::disk('public')->copy($inputPath, $outputPath);
-            return $outputPath;
-        }
+        return $post;
     }
 }
